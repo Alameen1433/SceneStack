@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CineTrack Watchlist</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap"
+    rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+        extend: {
+            fontFamily: {
+            sans: ["Poppins", "sans-serif"],
+            },
+            colors: {
+            "brand-bg": "#0D0C11",
+            "brand-surface": "#1F2937",
+              "brand-primary": "#4338CA", // indigo-700
+              "brand-secondary": "#4F46E5", // indigo-600
+            "brand-text-light": "#F9FAFB",
+            "brand-text-dim": "#9CA3AF",
+            },
+        },
+        },
+    };
+    </script>
+    <script type="importmap">
+    {
+        "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "idb": "https://esm.sh/idb@8"
+        }
+    }
+    </script>
+</head>
+
+<body class="bg-brand-bg">
+    <div id="root"></div>
+    <script type="module" src="/src/index.tsx"></script>
+</body>
+</html>

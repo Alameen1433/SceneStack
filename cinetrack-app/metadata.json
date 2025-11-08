@@ -1,0 +1,5 @@
+{
+  "name": "CineTrack: Your Personal Movie & Series Watchlist",
+  "description": "A sleek and modern application to search for movies and TV series, add them to a personal watchlist, and track your viewing progress, including individual episodes for series. Powered by the TMDB API.",
+  "requestFramePermissions": []
+}
