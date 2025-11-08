@@ -29,6 +29,7 @@ import { LoadingPosterAnimation } from "./components/LoadingPosterAnimation";
 import { BottomNavBar } from "./components/BottomNavBar";
 import { SideNavBar } from "./components/SideNavBar";
 import { useLocalStorage } from "./hooks/useLocalStorage";
+import { Carousel } from "./components/Carousal";
 
 const MediaSection: React.FC<{
   title: string;
@@ -209,6 +210,33 @@ const App: React.FC = () => {
       }
     },
     [watchlistIds]
+  );
+
+  const handleToggleWatchlistFromSearchResult = useCallback(
+    async (media: SearchResult) => {
+      if (watchlistIds.has(media.id)) {
+        try {
+          await dbService.deleteWatchlistItem(media.id);
+          setWatchlist((prev) => prev.filter((item) => item.id !== media.id));
+        } catch (err) {
+          setError("Failed to remove item from watchlist.");
+          console.error(err);
+        }
+      } else {
+        setError(null);
+        try {
+          const details =
+            media.media_type === "movie"
+              ? await getMovieDetails(media.id)
+              : await getTVDetails(media.id);
+          await handleToggleWatchlist(details);
+        } catch (err) {
+          setError("Failed to add item to watchlist.");
+          console.error(err);
+        }
+      }
+    },
+    [watchlistIds, handleToggleWatchlist]
   );
 
   const handleUpdateTags = useCallback(
@@ -686,6 +714,16 @@ const App: React.FC = () => {
                       </div>
                     ) : (
                       <div className="space-y-12">
+                        {popularMovies.length > 0 && (
+                          <Carousel
+                            items={popularMovies.slice(0, 5)}
+                            onViewDetails={handleSelectMedia}
+                            onToggleWatchlist={
+                              handleToggleWatchlistFromSearchResult
+                            }
+                            watchlistIds={watchlistIds}
+                          />
+                        )}
                         <MediaSection
                           title="Trending this week 🔥"
                           items={trending}

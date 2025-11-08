@@ -5,7 +5,7 @@ import type {
   TVDetail,
   WatchlistItem,
   SeasonDetail,
-  Video,
+  //Video,
   WatchProvider,
   WatchProviderCountry,
 } from "../types";
@@ -165,7 +165,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
   watchlistItem,
   onToggleMovieWatched,
   onToggleEpisodeWatched,
-  onSearch,
+  //onSearch,
   onToggleSeasonWatched,
   onUpdateTags,
 }) => {
@@ -178,6 +178,32 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
 
   const [providers, setProviders] = useState<WatchProviderCountry | null>(null);
   const [isLoadingProviders, setIsLoadingProviders] = useState(true);
+
+  const logo = useMemo(() => {
+    const logos = media.images?.logos;
+    if (!logos || logos.length === 0) return null;
+
+    // Prioritize English SVG
+    let bestLogo = logos.find(
+      (l) => l.iso_639_1 === "en" && l.file_path.endsWith(".svg")
+    );
+    if (bestLogo) return bestLogo;
+
+    // Any SVG
+    bestLogo = logos.find((l) => l.file_path.endsWith(".svg"));
+    if (bestLogo) return bestLogo;
+
+    // English PNG
+    bestLogo = logos.find((l) => l.iso_639_1 === "en");
+    if (bestLogo) return bestLogo;
+
+    // First available logo
+    return logos[0];
+  }, [media.images]);
+
+  const logoUrl = logo
+    ? `${TMDB_IMAGE_BASE_URL.replace("w500", "original")}${logo.file_path}`
+    : "";
 
   const rentOrBuyProviders = useMemo(() => {
     if (!providers) return [];
@@ -344,9 +370,17 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
             </div>
 
             <div className="flex-grow flex flex-col justify-center space-y-6 lg:space-y-8">
-              <h1 className="text-4xl md:text-5xl font-black uppercase tracking-wider text-white [text-shadow:_2px_2px_4px_rgb(0_0_0_/_50%)]">
-                {title}
-              </h1>
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt={`${title} logo`}
+                  className="max-h-24 md:max-h-32 w-auto object-contain self-start drop-shadow-lg"
+                />
+              ) : (
+                <h1 className="text-4xl md:text-5xl font-black uppercase tracking-wider text-white [text-shadow:_2px_2px_4px_rgb(0_0_0_/_50%)]">
+                  {title}
+                </h1>
+              )}
 
               <div className="flex items-center gap-4 sm:gap-6 text-brand-text-dim">
                 {media.media_type === "movie" && (

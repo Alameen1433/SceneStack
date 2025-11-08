@@ -4,6 +4,7 @@ export interface SearchResult {
   name?: string; // TV shows have 'name'
   overview: string;
   poster_path: string | null;
+  backdrop_path: string | null;
   media_type: "movie" | "tv";
   release_date?: string; // Movie
   first_air_date?: string; // TV
@@ -23,6 +24,15 @@ export interface Video {
   site: "YouTube" | string;
   type: "Trailer" | "Teaser" | string;
   official: boolean;
+}
+
+export interface LogoImage {
+  file_path: string;
+  iso_639_1: string; // language code
+}
+
+export interface ImageCollection {
+  logos: LogoImage[];
 }
 
 interface BaseMedia {
@@ -45,6 +55,7 @@ export interface MovieDetail extends BaseMedia {
   videos: {
     results: Video[];
   };
+  images: ImageCollection;
 }
 
 export interface TVDetail extends BaseMedia {
@@ -70,6 +81,7 @@ export interface TVDetail extends BaseMedia {
   videos: {
     results: Video[];
   };
+  images: ImageCollection;
 }
 
 export type Media = SearchResult | WatchlistItem;

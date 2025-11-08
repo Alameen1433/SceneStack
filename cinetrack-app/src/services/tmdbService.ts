@@ -5,6 +5,7 @@ import type {
   TVDetail,
   SeasonDetail,
   WatchProvidersResponse,
+  LogoImage,
 } from "../types";
 
 const TMDB_API_READ_ACCESS_TOKEN = import.meta.env.VITE_TMDB_API_READ_ACCESS_TOKEN;
@@ -67,14 +68,14 @@ export const getPopularTVShows = async (): Promise<SearchResult[]> => {
 
 export const getMovieDetails = async (id: number): Promise<MovieDetail> => {
   const details = await fetchFromTMDB<Omit<MovieDetail, "media_type">>(
-    `movie/${id}?append_to_response=videos,credits`
+    `movie/${id}?append_to_response=videos,credits,images`
   );
   return { ...details, media_type: "movie" };
 };
 
 export const getTVDetails = async (id: number): Promise<TVDetail> => {
   const details = await fetchFromTMDB<Omit<TVDetail, "media_type">>(
-    `tv/${id}?append_to_response=videos,credits`
+    `tv/${id}?append_to_response=videos,credits,images`
   );
   return { ...details, media_type: "tv" };
 };
@@ -113,4 +114,11 @@ export const getTVRecommendations = async (
   }>(`tv/${id}/recommendations`);
   // Explicitly add media_type as it might be missing from this endpoint
   return data.results.map((item) => ({ ...item, media_type: "tv" }));
+};
+
+export const getMediaImages = async (
+  id: number,
+  media_type: "movie" | "tv"
+) => {
+  return fetchFromTMDB<{ logos: LogoImage[] }>(`${media_type}/${id}/images`);
 };
