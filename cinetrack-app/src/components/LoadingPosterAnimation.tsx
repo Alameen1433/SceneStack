@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { TMDB_IMAGE_BASE_URL } from "../constants";
 import type { Media } from "../types";
 
@@ -7,22 +7,26 @@ interface LoadingPosterAnimationProps {
   rect: DOMRect;
 }
 
-const TARGET_WIDTH = 250;
-
 export const LoadingPosterAnimation: React.FC<LoadingPosterAnimationProps> = ({
   media,
   rect,
 }) => {
+  const targetWidth = useMemo(
+    () => Math.min(250, window.innerWidth * 0.65),
+    []
+  );
+
   const [styles, setStyles] = useState<React.CSSProperties>({
     position: "fixed",
     top: rect.top,
     left: rect.left,
     width: rect.width,
     height: rect.height,
-    transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+    transition: "all 0.5s cubic-bezier(0.65, 0, 0.35, 1)",
     zIndex: 50,
     borderRadius: "0.75rem", // 12px, same as MediaCard
     overflow: "hidden",
+    willChange: "top, left, width, height, transform, box-shadow",
   });
   const [backdropOpacity, setBackdropOpacity] = useState(0);
   const [spinnerOpacity, setSpinnerOpacity] = useState(0);
@@ -33,15 +37,15 @@ export const LoadingPosterAnimation: React.FC<LoadingPosterAnimationProps> = ({
         ...prev,
         top: "50%",
         left: "50%",
-        width: TARGET_WIDTH,
-        height: TARGET_WIDTH * 1.5,
+        width: targetWidth,
+        height: targetWidth * 1.5,
         transform: "translate(-50%, -50%)",
         boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
       }));
       setBackdropOpacity(0.8);
       setSpinnerOpacity(1);
     });
-  }, []);
+  }, [targetWidth]);
 
   return (
     <div

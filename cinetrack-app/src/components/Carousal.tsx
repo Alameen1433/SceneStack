@@ -104,7 +104,7 @@ export const Carousel: React.FC<CarouselProps> = ({
 
     return (
         <section
-            className="relative w-full aspect-video lg:aspect-[2.4/1] rounded-2xl overflow-hidden shadow-2xl"
+            className="relative w-full aspect-[1/1] sm:aspect-video lg:aspect-[2.4/1] rounded-2xl overflow-hidden shadow-2xl"
             aria-roledescription="carousel"
         >
             <div className="w-full h-full">
