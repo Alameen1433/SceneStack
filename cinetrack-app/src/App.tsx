@@ -319,7 +319,7 @@ const App: React.FC = () => {
       const url = URL.createObjectURL(dataBlob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `cinetrack_watchlist_${
+      link.download = `scenestack_watchlist_${
         new Date().toISOString().split("T")[0]
       }.json`;
       document.body.appendChild(link);
@@ -362,7 +362,7 @@ const App: React.FC = () => {
         }
       } catch (err) {
         setError(
-          "Import failed. Please ensure the file is a valid CineTrack JSON export."
+          "Import failed. Please ensure the file is a valid Scene Stack JSON export."
         );
         console.error(err);
       }
@@ -529,7 +529,7 @@ const App: React.FC = () => {
           {/* Desktop Header */}
           <div className="hidden sm:flex w-full items-center justify-between">
             <h1 className="text-3xl font-black tracking-tighter text-white">
-              Cine<span className="text-brand-secondary">'</span>track
+              Scene<span className="text-brand-secondary">Stack</span>
             </h1>
             <div className="w-full max-w-sm flex items-center gap-2">
               <div className="flex-grow">
@@ -600,7 +600,7 @@ const App: React.FC = () => {
             ) : (
               <>
                 <h1 className="text-3xl font-black tracking-tighter text-white">
-                  Cine<span className="text-brand-secondary">'</span>track
+                  Scene<span className="text-brand-secondary">Stack</span>
                 </h1>
                 <div className="flex items-center gap-2">
                   <button

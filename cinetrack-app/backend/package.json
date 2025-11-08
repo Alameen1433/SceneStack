@@ -1,7 +1,7 @@
 {
-  "name": "cinetrack-backend",
+  "name": "scenestack-backend",
   "version": "1.0.0",
-  "description": "Backend server for the CineTrack application.",
+  "description": "Backend server for the Scene Stack application.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -11,7 +11,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "mongodb": "^6.20.0"
+    "mongodb": "^6.8.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"

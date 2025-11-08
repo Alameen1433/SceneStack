@@ -1,5 +1,5 @@
 // backend/server.js
-// A simple Node.js Express backend to connect CineTrack to MongoDB.
+// A simple Node.js Express backend to connect Scene Stack to MongoDB.
 //
 // --- How to Run ---
 // 1. In your terminal, navigate to this `backend` directory.
@@ -46,7 +46,7 @@ let watchlistCollection;
 async function connectToDb() {
   try {
     await client.connect();
-    const db = client.db("cinetrackDB"); // You can change this database name if you like
+    const db = client.db("scenestackDB"); // You can change this database name if you like
     watchlistCollection = db.collection("watchlist");
     console.log("Successfully connected to MongoDB.");
 
@@ -174,6 +174,6 @@ app.post("/api/watchlist/import", async (req, res) => {
 // --- Start Server ---
 connectToDb().then(() => {
   app.listen(port, () => {
-    console.log(`CineTrack server listening on http://localhost:${port}`);
+    console.log(`Scene Stack server listening on http://localhost:${port}`);
   });
 });
