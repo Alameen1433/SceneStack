@@ -357,7 +357,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
           } gap-8 p-4 sm:p-6 lg:p-8`}
         >
           <div className="flex flex-col md:flex-row gap-8 items-start">
-            <div className="w-full md:w-auto md:max-w-[300px] flex-shrink-0 mx-auto">
+            <div className="w-full md:w-auto md:max-w-[300px] flex-shrink-0 mx-auto hidden md:block">
               {media.poster_path ? (
                 <img
                   src={`${TMDB_IMAGE_BASE_URL}${media.poster_path}`}
@@ -369,7 +369,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
               )}
             </div>
 
-            <div className="flex-grow flex flex-col justify-center space-y-6 lg:space-y-8">
+            <div className="flex-grow flex flex-col justify-center space-y-4 md:space-y-6 lg:space-y-8">
               {logoUrl ? (
                 <img
                   src={logoUrl}
