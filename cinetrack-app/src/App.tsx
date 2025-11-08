@@ -20,30 +20,15 @@ import type {
   WatchlistItem,
   MovieDetail,
   TVDetail,
-  SeasonDetail,
+  //SeasonDetail,
   Media,
   TVWatchlistItem,
   MovieWatchlistItem,
 } from "./types";
 import { LoadingPosterAnimation } from "./components/LoadingPosterAnimation";
 import { BottomNavBar } from "./components/BottomNavBar";
-
-const TabButton: React.FC<{
-  title: string;
-  isActive: boolean;
-  onClick: () => void;
-}> = ({ title, isActive, onClick }) => (
-  <button
-    onClick={onClick}
-    className={`px-5 py-2 text-sm font-semibold rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-brand-bg focus:ring-brand-primary ${
-      isActive
-        ? "bg-brand-primary text-white"
-        : "text-brand-text-dim hover:text-brand-text-light"
-    }`}
-  >
-    {title}
-  </button>
-);
+import { SideNavBar } from "./components/SideNavBar";
+import { useLocalStorage } from "./hooks/useLocalStorage";
 
 const MediaSection: React.FC<{
   title: string;
@@ -131,6 +116,10 @@ const App: React.FC = () => {
   } | null>(null);
   const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useLocalStorage(
+    "sidebarCollapsed",
+    false
+  );
 
   const watchlistIds = useMemo(
     () => new Set(watchlist.map((item) => item.id)),
@@ -524,55 +513,36 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-brand-bg text-brand-text-light font-sans">
-      <header className="sticky top-0 z-20 bg-brand-bg/80 backdrop-blur-lg">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          {/* Desktop Header */}
-          <div className="hidden sm:flex w-full items-center justify-between">
-            <h1 className="text-3xl font-black tracking-tighter text-white">
-              Scene<span className="text-brand-secondary">Stack</span>
-            </h1>
-            <div className="w-full max-w-sm flex items-center gap-2">
-              <div className="flex-grow">
-                <SearchBar
-                  onSearch={handleSearch}
-                  isLoading={isSearchLoading}
-                />
+      <SideNavBar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+      />
+
+      <div
+        className={`transition-all duration-300 ease-in-out ${
+          isSidebarCollapsed ? "lg:pl-20" : "lg:pl-64"
+        }`}
+      >
+        <header className="sticky top-0 z-20 bg-brand-bg/80 backdrop-blur-lg">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            {/* Desktop Header */}
+            <div className="hidden sm:flex w-full items-center justify-between">
+              <div className="lg:hidden text-3xl font-black tracking-tighter text-white">
+                Scene<span className="text-brand-secondary">Stack</span>
               </div>
-              <button
-                onClick={() => setIsSettingsOpen(true)}
-                className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light hover:bg-brand-surface transition-colors flex-shrink-0"
-                aria-label="Open settings"
-              >
-                <svg
-                  className="h-6 w-6"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              <div className="w-full max-w-sm flex items-center gap-2 ml-auto">
+                <div className="flex-grow">
+                  <SearchBar
+                    onSearch={handleSearch}
+                    isLoading={isSearchLoading}
                   />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
-          {/* Mobile Header */}
-          <div className="flex sm:hidden w-full items-center justify-between">
-            {isSearchExpanded ? (
-              <div className="flex w-full items-center gap-2">
+                </div>
                 <button
-                  onClick={() => setIsSearchExpanded(false)}
-                  className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light"
-                  aria-label="Close search"
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light hover:bg-brand-surface transition-colors flex-shrink-0"
+                  aria-label="Open settings"
                 >
                   <svg
                     className="h-6 w-6"
@@ -585,28 +555,25 @@ const App: React.FC = () => {
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      d="M15 19l-7-7 7-7"
+                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                     />
                   </svg>
                 </button>
-                <div className="flex-grow">
-                  <SearchBar
-                    onSearch={handleSearch}
-                    isLoading={isSearchLoading}
-                    isExpanded={isSearchExpanded}
-                  />
-                </div>
               </div>
-            ) : (
-              <>
-                <h1 className="text-3xl font-black tracking-tighter text-white">
-                  Scene<span className="text-brand-secondary">Stack</span>
-                </h1>
-                <div className="flex items-center gap-2">
+            </div>
+            {/* Mobile Header */}
+            <div className="flex sm:hidden w-full items-center justify-between">
+              {isSearchExpanded ? (
+                <div className="flex w-full items-center gap-2">
                   <button
-                    onClick={() => setIsSearchExpanded(true)}
+                    onClick={() => setIsSearchExpanded(false)}
                     className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light"
-                    aria-label="Open search"
+                    aria-label="Close search"
                   >
                     <svg
                       className="h-6 w-6"
@@ -619,243 +586,256 @@ const App: React.FC = () => {
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        d="M15 19l-7-7 7-7"
                       />
                     </svg>
                   </button>
-                  <button
-                    onClick={() => setIsSettingsOpen(true)}
-                    className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light hover:bg-brand-surface transition-colors flex-shrink-0"
-                    aria-label="Open settings"
-                  >
-                    <svg
-                      className="h-6 w-6"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
-
-      <main className="pb-24 sm:pb-0">
-        {searchResults.length === 0 && (
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="my-6 hidden sm:flex items-center gap-2">
-              <TabButton
-                title="Discover"
-                isActive={activeTab === "discover"}
-                onClick={() => setActiveTab("discover")}
-              />
-              <TabButton
-                title="My List"
-                isActive={activeTab === "lists"}
-                onClick={() => setActiveTab("lists")}
-              />
-              <TabButton
-                title="Recommendations"
-                isActive={activeTab === "recommendations"}
-                onClick={() => setActiveTab("recommendations")}
-              />
-            </div>
-          </div>
-        )}
-
-        <div className="container mx-auto p-4 sm:p-6 lg:p-8 pt-0">
-          {error && <p className="text-red-500 text-center mb-4">{error}</p>}
-
-          {searchResults.length > 0 ? (
-            <section>
-              <h2 className="text-3xl font-bold mb-6 text-brand-text-light">
-                Search Results
-              </h2>
-              <MediaGrid
-                mediaItems={searchResults}
-                onCardClick={handleSelectMedia}
-                watchlistIds={watchlistIds}
-                selectedMediaId={selectedMediaId}
-              />
-            </section>
-          ) : isDbLoading ? (
-            <div className="text-center py-20 text-brand-text-dim">
-              <p>Loading your watchlist...</p>
-            </div>
-          ) : (
-            <>
-              {activeTab === "discover" && (
-                <div>
-                  {isDiscoverLoading ? (
-                    <div className="text-center py-10">
-                      <p>Loading discover content...</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-12">
-                      <MediaSection
-                        title="Trending this week 🔥"
-                        items={trending}
-                        onCardClick={handleSelectMedia}
-                        watchlistIds={watchlistIds}
-                        emptyMessage="Could not load trending items."
-                        selectedMediaId={selectedMediaId}
-                      />
-                      <MediaSection
-                        title="Popular Movies 🎥"
-                        items={popularMovies}
-                        onCardClick={handleSelectMedia}
-                        watchlistIds={watchlistIds}
-                        emptyMessage="Could not load popular movies."
-                        selectedMediaId={selectedMediaId}
-                      />
-                      <MediaSection
-                        title="Popular TV Shows 📡"
-                        items={popularTV}
-                        onCardClick={handleSelectMedia}
-                        watchlistIds={watchlistIds}
-                        emptyMessage="Could not load popular TV shows."
-                        selectedMediaId={selectedMediaId}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-              {activeTab === "lists" && (
-                <>
-                  {allUniqueTags.length > 0 && (
-                    <div className="mb-8">
-                      <h3 className="text-sm font-semibold uppercase tracking-widest text-brand-text-dim mb-3">
-                        Filter by Tag
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => setActiveTagFilter(null)}
-                          className={`px-4 py-1 text-sm rounded-full transition-colors ${
-                            !activeTagFilter
-                              ? "bg-brand-primary text-white"
-                              : "bg-brand-surface hover:bg-brand-surface/70 text-brand-text-light"
-                          }`}
-                        >
-                          All
-                        </button>
-                        {allUniqueTags.map((tag) => (
-                          <button
-                            key={tag}
-                            onClick={() => setActiveTagFilter(tag)}
-                            className={`px-4 py-1 text-sm rounded-full transition-colors capitalize ${
-                              activeTagFilter === tag
-                                ? "bg-brand-primary text-white"
-                                : "bg-brand-surface hover:bg-brand-surface/70 text-brand-text-light"
-                            }`}
-                          >
-                            {tag}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <div className="space-y-12">
-                    <MediaSection
-                      title="Currently Watching 🎦"
-                      items={currentlyWatchingItems}
-                      progressMap={progressMap}
-                      onCardClick={handleSelectMedia}
-                      watchlistIds={watchlistIds}
-                      emptyMessage="Nothing is currently being watched."
-                      selectedMediaId={selectedMediaId}
-                    />
-                    <MediaSection
-                      title="My List 🗒"
-                      items={watchlistItems}
-                      onCardClick={handleSelectMedia}
-                      watchlistIds={watchlistIds}
-                      emptyMessage="Your list is empty."
-                      emptySubMessage="Use the search bar to find movies and shows to add."
-                      selectedMediaId={selectedMediaId}
-                    />
-                    <MediaSection
-                      title="Watched ✅"
-                      items={watchedItems}
-                      onCardClick={handleSelectMedia}
-                      watchlistIds={watchlistIds}
-                      emptyMessage="You haven't marked any items as watched yet."
-                      selectedMediaId={selectedMediaId}
+                  <div className="flex-grow">
+                    <SearchBar
+                      onSearch={handleSearch}
+                      isLoading={isSearchLoading}
+                      isExpanded={isSearchExpanded}
                     />
                   </div>
-                </>
-              )}
-
-              {activeTab === "recommendations" && (
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-3xl font-bold text-brand-text-light">
-                      For You
-                    </h2>
+                </div>
+              ) : (
+                <>
+                  <h1 className="text-3xl font-black tracking-tighter text-white">
+                    Scene<span className="text-brand-secondary">Stack</span>
+                  </h1>
+                  <div className="flex items-center gap-2">
                     <button
-                      onClick={fetchRecommendations}
-                      disabled={isRecsLoading || watchlist.length === 0}
-                      className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light hover:bg-brand-surface transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      aria-label="Refresh recommendations"
+                      onClick={() => setIsSearchExpanded(true)}
+                      className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light"
+                      aria-label="Open search"
                     >
                       <svg
-                        className={`h-5 w-5 ${
-                          isRecsLoading ? "animate-spin" : ""
-                        }`}
+                        className="h-6 w-6"
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
+                        strokeWidth={2}
                       >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 4v5h5M20 20v-5h-5M4 4a12 12 0 0117 4.1M20 20a12 12 0 01-17 -4.1"
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => setIsSettingsOpen(true)}
+                      className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light hover:bg-brand-surface transition-colors flex-shrink-0"
+                      aria-label="Open settings"
+                    >
+                      <svg
+                        className="h-6 w-6"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                         />
                       </svg>
                     </button>
                   </div>
-                  {isRecsLoading ? (
-                    <div className="text-center py-10">
-                      <p>Finding recommendations...</p>
-                    </div>
-                  ) : recommendations.length > 0 ? (
-                    <MediaGrid
-                      mediaItems={recommendations}
-                      onCardClick={handleSelectMedia}
-                      watchlistIds={watchlistIds}
-                      selectedMediaId={selectedMediaId}
-                    />
-                  ) : (
-                    <div className="text-center py-10 px-6 bg-brand-surface/50 rounded-lg">
-                      <p className="text-brand-text-dim">
-                        {watchlist.length > 0
-                          ? "Could not generate recommendations. Try again."
-                          : "Add items to your lists to get recommendations."}
-                      </p>
-                    </div>
-                  )}
-                </div>
+                </>
               )}
-            </>
-          )}
-        </div>
-      </main>
+            </div>
+          </div>
+        </header>
+
+        <main className="pb-24 lg:pb-0">
+          <div className="container mx-auto p-4 sm:p-6 lg:p-8">
+            {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+
+            {searchResults.length > 0 ? (
+              <section>
+                <h2 className="text-3xl font-bold mb-6 text-brand-text-light">
+                  Search Results
+                </h2>
+                <MediaGrid
+                  mediaItems={searchResults}
+                  onCardClick={handleSelectMedia}
+                  watchlistIds={watchlistIds}
+                  selectedMediaId={selectedMediaId}
+                />
+              </section>
+            ) : isDbLoading ? (
+              <div className="text-center py-20 text-brand-text-dim">
+                <p>Loading your watchlist...</p>
+              </div>
+            ) : (
+              <>
+                {activeTab === "discover" && (
+                  <div>
+                    {isDiscoverLoading ? (
+                      <div className="text-center py-10">
+                        <p>Loading discover content...</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-12">
+                        <MediaSection
+                          title="Trending this week 🔥"
+                          items={trending}
+                          onCardClick={handleSelectMedia}
+                          watchlistIds={watchlistIds}
+                          emptyMessage="Could not load trending items."
+                          selectedMediaId={selectedMediaId}
+                        />
+                        <MediaSection
+                          title="Popular Movies 🎥"
+                          items={popularMovies}
+                          onCardClick={handleSelectMedia}
+                          watchlistIds={watchlistIds}
+                          emptyMessage="Could not load popular movies."
+                          selectedMediaId={selectedMediaId}
+                        />
+                        <MediaSection
+                          title="Popular TV Shows 📡"
+                          items={popularTV}
+                          onCardClick={handleSelectMedia}
+                          watchlistIds={watchlistIds}
+                          emptyMessage="Could not load popular TV shows."
+                          selectedMediaId={selectedMediaId}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+                {activeTab === "lists" && (
+                  <>
+                    {allUniqueTags.length > 0 && (
+                      <div className="mb-8">
+                        <h3 className="text-sm font-semibold uppercase tracking-widest text-brand-text-dim mb-3">
+                          Filter by Tag
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => setActiveTagFilter(null)}
+                            className={`px-4 py-1 text-sm rounded-full transition-colors ${
+                              !activeTagFilter
+                                ? "bg-brand-primary text-white"
+                                : "bg-brand-surface hover:bg-brand-surface/70 text-brand-text-light"
+                            }`}
+                          >
+                            All
+                          </button>
+                          {allUniqueTags.map((tag) => (
+                            <button
+                              key={tag}
+                              onClick={() => setActiveTagFilter(tag)}
+                              className={`px-4 py-1 text-sm rounded-full transition-colors capitalize ${
+                                activeTagFilter === tag
+                                  ? "bg-brand-primary text-white"
+                                  : "bg-brand-surface hover:bg-brand-surface/70 text-brand-text-light"
+                              }`}
+                            >
+                              {tag}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div className="space-y-12">
+                      <MediaSection
+                        title="Currently Watching 🎦"
+                        items={currentlyWatchingItems}
+                        progressMap={progressMap}
+                        onCardClick={handleSelectMedia}
+                        watchlistIds={watchlistIds}
+                        emptyMessage="Nothing is currently being watched."
+                        selectedMediaId={selectedMediaId}
+                      />
+                      <MediaSection
+                        title="My List 🗒"
+                        items={watchlistItems}
+                        onCardClick={handleSelectMedia}
+                        watchlistIds={watchlistIds}
+                        emptyMessage="Your list is empty."
+                        emptySubMessage="Use the search bar to find movies and shows to add."
+                        selectedMediaId={selectedMediaId}
+                      />
+                      <MediaSection
+                        title="Watched ✅"
+                        items={watchedItems}
+                        onCardClick={handleSelectMedia}
+                        watchlistIds={watchlistIds}
+                        emptyMessage="You haven't marked any items as watched yet."
+                        selectedMediaId={selectedMediaId}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {activeTab === "recommendations" && (
+                  <div>
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-3xl font-bold text-brand-text-light">
+                        For You
+                      </h2>
+                      <button
+                        onClick={fetchRecommendations}
+                        disabled={isRecsLoading || watchlist.length === 0}
+                        className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light hover:bg-brand-surface transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label="Refresh recommendations"
+                      >
+                        <svg
+                          className={`h-5 w-5 ${
+                            isRecsLoading ? "animate-spin" : ""
+                          }`}
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 4v5h5M20 20v-5h-5M4 4a12 12 0 0117 4.1M20 20a12 12 0 01-17 -4.1"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                    {isRecsLoading ? (
+                      <div className="text-center py-10">
+                        <p>Finding recommendations...</p>
+                      </div>
+                    ) : recommendations.length > 0 ? (
+                      <MediaGrid
+                        mediaItems={recommendations}
+                        onCardClick={handleSelectMedia}
+                        watchlistIds={watchlistIds}
+                        selectedMediaId={selectedMediaId}
+                      />
+                    ) : (
+                      <div className="text-center py-10 px-6 bg-brand-surface/50 rounded-lg">
+                        <p className="text-brand-text-dim">
+                          {watchlist.length > 0
+                            ? "Could not generate recommendations. Try again."
+                            : "Add items to your lists to get recommendations."}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </main>
+      </div>
 
       {searchResults.length === 0 && (
         <BottomNavBar activeTab={activeTab} onTabChange={setActiveTab} />

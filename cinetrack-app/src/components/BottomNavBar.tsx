@@ -93,7 +93,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   ] as const;
 
   return (
-    <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-brand-bg/80 backdrop-blur-lg border-t border-brand-surface/50 z-20">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-brand-bg/80 backdrop-blur-lg border-t border-brand-surface/50 z-20">
       <div className="flex justify-around items-start max-w-xl mx-auto">
         {navItems.map((item) => (
           <NavItem
