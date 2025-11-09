@@ -174,6 +174,6 @@ app.post("/api/watchlist/import", async (req, res) => {
 // --- Start Server ---
 connectToDb().then(() => {
   app.listen(port, () => {
-    console.log(`Scene Stack server listening on http://localhost:${port}`);
+    console.log(`Scene Stack server up and running on port ${port}`);
   });
 });

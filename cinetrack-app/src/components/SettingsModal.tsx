@@ -49,13 +49,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               Data Storage
             </h3>
             <p className="text-sm text-brand-text-dim">
-              By default, your watchlist is stored directly in this browser's
-              local storage. This is fast and works offline, but the data is
-              tied to this specific browser on this device.
+              Needs Working, features add akkan olla sthalam
             </p>
             <p className="text-sm text-brand-text-dim mt-2">
-              Clearing your browser data{" "}
-              <strong className="text-red-400">will permanently delete</strong>{" "}
+              Placeholder blah blah blah.{" "}
+              <strong className="text-red-400"> lorem ipsum </strong>{" "}
               your watchlist.
             </p>
           </div>

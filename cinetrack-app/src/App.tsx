@@ -127,23 +127,25 @@ const App: React.FC = () => {
     [watchlist]
   );
 
+  // Effect to handle browser back navigation for modals
   useEffect(() => {
-    const loadWatchlistFromDb = async () => {
-      setIsDbLoading(true);
-      try {
-        const items = await dbService.getAllWatchlistItems();
-        setWatchlist(items);
-      } catch (err) {
-        console.error("Failed to load watchlist from DB", err);
-        setError("Could not load your watchlist. Please try refreshing.");
-      } finally {
-        setIsDbLoading(false);
+    const handleModalPopState = () => {
+      // Only handle modal closing here. Search is handled by a different effect.
+      const hash = window.location.hash;
+      if (!hash.startsWith("#media/") && !hash.startsWith("#settings")) {
+        setSelectedMediaId(null);
+        setDetailedMedia(null);
+        setAnimatingMedia(null);
+        setIsSettingsOpen(false);
       }
     };
-    loadWatchlistFromDb();
+    window.addEventListener("popstate", handleModalPopState);
+    return () => {
+      window.removeEventListener("popstate", handleModalPopState);
+    };
   }, []);
 
-  const handleSearch = useCallback(async (query: string) => {
+  const performSearch = useCallback(async (query: string) => {
     if (!query) {
       setSearchResults([]);
       return;
@@ -161,9 +163,90 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // Effect for URL-driven search state
+  useEffect(() => {
+    const handleSearchPopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const query = params.get("q") || "";
+      performSearch(query);
+      if (!query) {
+        setIsSearchExpanded(false);
+      }
+    };
+
+    window.addEventListener("popstate", handleSearchPopState);
+
+    // Initial load check
+    const initialParams = new URLSearchParams(window.location.search);
+    const initialQuery = initialParams.get("q");
+    if (initialQuery) {
+      performSearch(initialQuery);
+      setIsSearchExpanded(true); // Expand search on mobile if loaded with a query
+    }
+
+    return () => {
+      window.removeEventListener("popstate", handleSearchPopState);
+    };
+  }, [performSearch]);
+
+  const handleSearch = useCallback(
+    (query: string) => {
+      const url = new URL(window.location.toString());
+      if (query) {
+        url.searchParams.set("q", query);
+      } else {
+        url.searchParams.delete("q");
+        setIsSearchExpanded(false); // Collapse search on mobile when clearing
+      }
+      // Use pushState to change URL without reloading and to create a history entry
+      window.history.pushState({}, "", url);
+
+      // After updating the URL, perform the search
+      performSearch(query);
+    },
+    [performSearch]
+  );
+
+  // Effect to clean up URL hash on initial load if state doesn't match
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.startsWith("#media/") || hash === "#settings") {
+      // If a modal hash exists but no modal is open in the state, it's a reload.
+      // Clean the URL to prevent a broken back-button state.
+      window.history.replaceState(
+        null,
+        "",
+        window.location.pathname + window.location.search
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    const loadWatchlistFromDb = async () => {
+      setIsDbLoading(true);
+      try {
+        const items = await dbService.getAllWatchlistItems();
+        setWatchlist(items);
+      } catch (err) {
+        console.error("Failed to load watchlist from DB", err);
+        setError("Could not load your watchlist. Please try refreshing.");
+      } finally {
+        setIsDbLoading(false);
+      }
+    };
+    loadWatchlistFromDb();
+  }, []);
+
   const handleSelectMedia = useCallback(
     async (media: Media, rect: DOMRect) => {
       if (animatingMedia) return; // Prevent double clicks
+
+      // Push history state to enable back gesture to close modal
+      window.history.pushState(
+        { modal: "mediaDetail" },
+        "",
+        `#media/${media.media_type}/${media.id}`
+      );
 
       setAnimatingMedia({ media, rect });
       setSelectedMediaId(`${media.media_type}-${media.id}`);
@@ -180,17 +263,16 @@ const App: React.FC = () => {
       } catch (err) {
         setError("Failed to fetch media details.");
         console.error(err);
-        setAnimatingMedia(null);
-        setSelectedMediaId(null);
+        // If fetching fails, go back to remove the pushed history state
+        window.history.back();
       }
     },
     [animatingMedia]
   );
 
   const handleCloseModal = () => {
-    setSelectedMediaId(null);
-    setDetailedMedia(null);
-    setAnimatingMedia(null);
+    // Trigger a history pop. The `popstate` listener will handle changing the state.
+    window.history.back();
   };
 
   const handleToggleWatchlist = useCallback(
@@ -375,7 +457,7 @@ const App: React.FC = () => {
         ) {
           await dbService.clearAndBulkPut(importedData);
           setWatchlist(importedData); // Update state to match DB
-          setIsSettingsOpen(false);
+          closeSettings();
         }
       } catch (err) {
         setError(
@@ -389,6 +471,15 @@ const App: React.FC = () => {
     };
     reader.readAsText(file);
     event.target.value = ""; // Reset for re-uploading
+  };
+
+  const openSettings = () => {
+    window.history.pushState({ modal: "settings" }, "", "#settings");
+    setIsSettingsOpen(true);
+  };
+
+  const closeSettings = () => {
+    window.history.back();
   };
 
   const allUniqueTags = useMemo(() => {
@@ -421,7 +512,6 @@ const App: React.FC = () => {
           }
         } else if (item.media_type === "tv") {
           // TV show
-          // FIX: Operator '+' cannot be applied to types 'unknown' and 'number'. Using `|| {}` ensures `watchedEpisodes` is not undefined and helps TypeScript correctly infer `watchedCount` as a number.
           const watchedCount = Object.values(item.watchedEpisodes || {}).reduce(
             (acc, eps) => acc + (Array.isArray(eps) ? eps.length : 0),
             0
@@ -449,7 +539,6 @@ const App: React.FC = () => {
   const progressMap = useMemo(() => {
     const map: Record<string, number> = {};
     currentlyWatchingItems.forEach((item) => {
-      // FIX: Operator '+' cannot be applied to types 'unknown' and 'number'. Using `|| {}` ensures `watchedEpisodes` is not undefined and helps TypeScript correctly infer `watchedCount` as a number.
       const watchedCount = Object.values(item.watchedEpisodes || {}).reduce(
         (acc, eps) => acc + (Array.isArray(eps) ? eps.length : 0),
         0
@@ -568,7 +657,7 @@ const App: React.FC = () => {
                   />
                 </div>
                 <button
-                  onClick={() => setIsSettingsOpen(true)}
+                  onClick={openSettings}
                   className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light hover:bg-brand-surface transition-colors flex-shrink-0"
                   aria-label="Open settings"
                 >
@@ -599,7 +688,7 @@ const App: React.FC = () => {
               {isSearchExpanded ? (
                 <div className="flex w-full items-center gap-2">
                   <button
-                    onClick={() => setIsSearchExpanded(false)}
+                    onClick={() => handleSearch("")}
                     className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light"
                     aria-label="Close search"
                   >
@@ -653,7 +742,7 @@ const App: React.FC = () => {
                       </svg>
                     </button>
                     <button
-                      onClick={() => setIsSettingsOpen(true)}
+                      onClick={openSettings}
                       className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light hover:bg-brand-surface transition-colors flex-shrink-0"
                       aria-label="Open settings"
                     >
@@ -904,7 +993,7 @@ const App: React.FC = () => {
 
       <SettingsModal
         isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
+        onClose={closeSettings}
         onExport={handleExportWatchlist}
         onImport={handleImportWatchlist}
       />
