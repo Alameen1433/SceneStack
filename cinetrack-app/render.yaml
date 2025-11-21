@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: cinetrack-app
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20.11.0
+      - key: MONGO_URI
+        sync: false
+      - key: VITE_TMDB_API_READ_ACCESS_TOKEN
+        sync: false

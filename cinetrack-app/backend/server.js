@@ -15,13 +15,22 @@ require("dotenv").config();
 const express = require("express");
 const { MongoClient, ServerApiVersion } = require("mongodb");
 const cors = require("cors");
+const path = require("path");
 
 const app = express();
 const port = process.env.PORT || 3001;
 
 // --- Middleware ---
-app.use(cors()); // Enable Cross-Origin Resource Sharing
+app.use(
+  cors({
+    origin: true, // Allow all origins (dynamically reflects the request origin)
+    credentials: true, // Allow cookies and authorization headers
+  })
+); // Enable Cross-Origin Resource Sharing
 app.use(express.json()); // Middleware to parse JSON bodies
+
+// Serve static files from the React frontend app
+app.use(express.static(path.join(__dirname, "../dist")));
 
 // --- MongoDB Connection ---
 const uri = process.env.MONGO_URI;
@@ -172,6 +181,13 @@ app.post("/api/watchlist/import", async (req, res) => {
 });
 
 // --- Start Server ---
+
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../dist/index.html"));
+});
+
 connectToDb().then(() => {
   app.listen(port, () => {
     console.log(`Scene Stack server up and running on port ${port}`);

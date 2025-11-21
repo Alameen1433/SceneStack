@@ -5,10 +5,9 @@ import type { WatchlistItem } from "../types";
 // In production, this would be your deployed backend URL.
 
 // Dynamically set the API host based on where the frontend is served.
-// This allows accessing the backend from other devices on the same network
-// by using the host's local network IP address instead of 'localhost'.
-const API_HOST = window.location.hostname;
-const API_BASE_URL = `http://${API_HOST}:3001/api`;
+// In production (served by backend), use relative path.
+// In development (Vite dev server), use localhost:3001.
+const API_BASE_URL = import.meta.env.PROD ? '/api' : 'http://localhost:3001/api';
 
 const apiFetch = async <T>(
   endpoint: string,
