@@ -1,4 +1,4 @@
-import type { WatchlistItem } from "../types";
+import type { WatchlistItem } from "../types/types";
 
 // This should point to your backend server.
 // For local development, this should be 'http://localhost:3001/api'.

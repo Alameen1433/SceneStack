@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { TMDB_IMAGE_BASE_URL } from "../constants";
+import { TMDB_IMAGE_BASE_URL } from "../../constants/constants";
 import type {
   MovieDetail,
   TVDetail,
@@ -8,9 +8,9 @@ import type {
   //Video,
   WatchProvider,
   WatchProviderCountry,
-} from "../types";
-import { EpisodeTracker } from "./EpisodeTracker";
-import { getWatchProviders } from "../services/tmdbService";
+} from "../../types/types";
+import { EpisodeTracker } from "../features/EpisodeTracker";
+import { getWatchProviders } from "../../services/tmdbService";
 
 interface MediaDetailModalProps {
   media: MovieDetail | TVDetail;

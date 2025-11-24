@@ -1,6 +1,6 @@
 import React from "react";
 import { MediaCard } from "./MediaCard";
-import type { Media } from "../types";
+import type { Media } from "../../types/types";
 
 interface MediaGridProps {
   mediaItems: Media[];

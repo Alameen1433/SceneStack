@@ -1,16 +1,3 @@
-// backend/server.js
-// A simple Node.js Express backend to connect Scene Stack to MongoDB.
-//
-// --- How to Run ---
-// 1. In your terminal, navigate to this `backend` directory.
-// 2. Install dependencies: `npm install`
-// 3. Create a file named `.env` in this directory.
-// 4. In the `.env` file, add your MongoDB connection string:
-//    MONGO_URI="your_mongodb_connection_string_here"
-// 5. Run the server: `npm start`
-//
-// The server will start on port 3001 by default.
-
 require("dotenv").config();
 const express = require("express");
 const { MongoClient, ServerApiVersion } = require("mongodb");
@@ -29,8 +16,7 @@ app.use(
 ); // Enable Cross-Origin Resource Sharing
 app.use(express.json()); // Middleware to parse JSON bodies
 
-// Serve static files from the React frontend app
-app.use(express.static(path.join(__dirname, "../dist")));
+app.use(express.static(path.join(__dirname, "../../client/dist")));
 
 // --- MongoDB Connection ---
 const uri = process.env.MONGO_URI;
@@ -55,11 +41,11 @@ let watchlistCollection;
 async function connectToDb() {
   try {
     await client.connect();
-    const db = client.db("scenestackDB"); // You can change this database name if you like
+    const db = client.db("scenestackDB");
     watchlistCollection = db.collection("watchlist");
     console.log("Successfully connected to MongoDB.");
 
-    // Create an index on the 'id' field for faster lookups and to ensure uniqueness
+    // Create an index on the 'id'
     await watchlistCollection.createIndex({ id: 1 }, { unique: true });
   } catch (err) {
     console.error("Failed to connect to MongoDB", err);
@@ -69,7 +55,7 @@ async function connectToDb() {
 
 // --- API Endpoints ---
 
-// GET /api/watchlist - Get all watchlist items
+// GET /api/watchlist
 app.get("/api/watchlist", async (req, res) => {
   try {
     const items = await watchlistCollection
@@ -83,7 +69,7 @@ app.get("/api/watchlist", async (req, res) => {
   }
 });
 
-// GET /api/watchlist/:id - Get a single watchlist item by its TMDB ID
+// GET /api/watchlist/:id 
 app.get("/api/watchlist/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
@@ -104,7 +90,7 @@ app.get("/api/watchlist/:id", async (req, res) => {
   }
 });
 
-// PUT /api/watchlist - Add or update a watchlist item
+// PUT /api/watchlist 
 app.put("/api/watchlist", async (req, res) => {
   try {
     const item = req.body;
@@ -127,7 +113,7 @@ app.put("/api/watchlist", async (req, res) => {
   }
 });
 
-// DELETE /api/watchlist/:id - Delete a watchlist item
+// DELETE 
 app.delete("/api/watchlist/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
@@ -148,7 +134,7 @@ app.delete("/api/watchlist/:id", async (req, res) => {
   }
 });
 
-// POST /api/watchlist/import - Clear and bulk import watchlist
+// POST /api/watchlist/import
 app.post("/api/watchlist/import", async (req, res) => {
   try {
     const items = req.body;
@@ -161,7 +147,6 @@ app.post("/api/watchlist/import", async (req, res) => {
     await watchlistCollection.deleteMany({});
 
     if (items.length > 0) {
-      // Ensure all items have a numeric id
       for (const item of items) {
         if (typeof item.id !== "number") {
           return res
@@ -185,7 +170,7 @@ app.post("/api/watchlist/import", async (req, res) => {
 // The "catchall" handler: for any request that doesn't
 // match one above, send back React's index.html file.
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../dist/index.html"));
+  res.sendFile(path.join(__dirname, "../../client/dist/index.html"));
 });
 
 connectToDb().then(() => {

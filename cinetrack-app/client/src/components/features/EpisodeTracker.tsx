@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import type { TVDetail, SeasonDetail } from "../types";
-import { TMDB_IMAGE_BASE_URL } from "../constants";
-import { Confetti } from "./Confetti";
+import type { TVDetail, SeasonDetail } from "../../types/types";
+import { TMDB_IMAGE_BASE_URL } from "../../constants/constants";
+import { Confetti } from "../common/Confetti";
 
 const EpisodePlaceholder: React.FC = () => (
   <div className="w-32 h-20 bg-brand-surface flex-shrink-0 rounded-md flex items-center justify-center">

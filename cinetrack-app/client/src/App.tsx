@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useMemo, useEffect } from "react";
-import { SearchBar } from "./components/SearchBar";
-import { MediaGrid } from "./components/MediaGrid";
-import { MediaDetailModal } from "./components/MediaDetailModal";
-import { SettingsModal } from "./components/SettingsModal";
+import { SearchBar } from "./components/common/SearchBar";
+import { MediaGrid } from "./components/media/MediaGrid";
+import { MediaDetailModal } from "./components/media/MediaDetailModal";
+import { SettingsModal } from "./components/features/SettingsModal";
 import * as dbService from "./services/dbService";
 import {
   searchMedia,
@@ -24,12 +24,12 @@ import type {
   Media,
   TVWatchlistItem,
   MovieWatchlistItem,
-} from "./types";
-import { LoadingPosterAnimation } from "./components/LoadingPosterAnimation";
-import { BottomNavBar } from "./components/BottomNavBar";
-import { SideNavBar } from "./components/SideNavBar";
+} from "./types/types";
+import { LoadingPosterAnimation } from "./components/common/LoadingPosterAnimation";
+import { BottomNavBar } from "./components/layout/BottomNavBar";
+import { SideNavBar } from "./components/layout/SideNavBar";
 import { useLocalStorage } from "./hooks/useLocalStorage";
-import { Carousel } from "./components/Carousal";
+import { Carousel } from "./components/media/Carousal";
 
 const MediaSection: React.FC<{
   title: string;
@@ -50,45 +50,45 @@ const MediaSection: React.FC<{
   emptySubMessage,
   selectedMediaId,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const itemsToShow = 12; // Approx 2 rows on larger screens
+    const [isExpanded, setIsExpanded] = useState(false);
+    const itemsToShow = 12; // Approx 2 rows on larger screens
 
-  const displayedItems = isExpanded ? items : items.slice(0, itemsToShow);
+    const displayedItems = isExpanded ? items : items.slice(0, itemsToShow);
 
-  return (
-    <section>
-      <h2 className="text-3xl font-bold mb-6 text-brand-text-light">{title}</h2>
-      {items.length > 0 ? (
-        <>
-          <MediaGrid
-            mediaItems={displayedItems}
-            onCardClick={onCardClick}
-            watchlistIds={watchlistIds}
-            progressMap={progressMap}
-            selectedMediaId={selectedMediaId}
-          />
-          {items.length > itemsToShow && (
-            <div className="text-center mt-8">
-              <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="bg-brand-surface hover:bg-brand-primary/50 text-brand-text-light font-semibold py-2 px-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 focus:ring-offset-brand-bg"
-              >
-                {isExpanded ? "Show Less" : "Show More"}
-              </button>
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="text-center py-10 px-6 bg-brand-surface/50 rounded-lg">
-          <p className="text-brand-text-dim">{emptyMessage}</p>
-          {emptySubMessage && (
-            <p className="text-sm text-gray-500 mt-2">{emptySubMessage}</p>
-          )}
-        </div>
-      )}
-    </section>
-  );
-};
+    return (
+      <section>
+        <h2 className="text-3xl font-bold mb-6 text-brand-text-light">{title}</h2>
+        {items.length > 0 ? (
+          <>
+            <MediaGrid
+              mediaItems={displayedItems}
+              onCardClick={onCardClick}
+              watchlistIds={watchlistIds}
+              progressMap={progressMap}
+              selectedMediaId={selectedMediaId}
+            />
+            {items.length > itemsToShow && (
+              <div className="text-center mt-8">
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="bg-brand-surface hover:bg-brand-primary/50 text-brand-text-light font-semibold py-2 px-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 focus:ring-offset-brand-bg"
+                >
+                  {isExpanded ? "Show Less" : "Show More"}
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-10 px-6 bg-brand-surface/50 rounded-lg">
+            <p className="text-brand-text-dim">{emptyMessage}</p>
+            {emptySubMessage && (
+              <p className="text-sm text-gray-500 mt-2">{emptySubMessage}</p>
+            )}
+          </div>
+        )}
+      </section>
+    );
+  };
 
 const App: React.FC = () => {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -418,9 +418,8 @@ const App: React.FC = () => {
       const url = URL.createObjectURL(dataBlob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `scenestack_watchlist_${
-        new Date().toISOString().split("T")[0]
-      }.json`;
+      link.download = `scenestack_watchlist_${new Date().toISOString().split("T")[0]
+        }.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -638,9 +637,8 @@ const App: React.FC = () => {
       />
 
       <div
-        className={`transition-all duration-300 ease-in-out ${
-          isSidebarCollapsed ? "lg:pl-20" : "lg:pl-64"
-        }`}
+        className={`transition-all duration-300 ease-in-out ${isSidebarCollapsed ? "lg:pl-20" : "lg:pl-64"
+          }`}
       >
         <header className="sticky top-0 z-20 bg-brand-bg/80 backdrop-blur-lg">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -851,11 +849,10 @@ const App: React.FC = () => {
                         <div className="flex flex-wrap gap-2">
                           <button
                             onClick={() => setActiveTagFilter(null)}
-                            className={`px-4 py-1 text-sm rounded-full transition-colors ${
-                              !activeTagFilter
-                                ? "bg-brand-primary text-white"
-                                : "bg-brand-surface hover:bg-brand-surface/70 text-brand-text-light"
-                            }`}
+                            className={`px-4 py-1 text-sm rounded-full transition-colors ${!activeTagFilter
+                              ? "bg-brand-primary text-white"
+                              : "bg-brand-surface hover:bg-brand-surface/70 text-brand-text-light"
+                              }`}
                           >
                             All
                           </button>
@@ -863,11 +860,10 @@ const App: React.FC = () => {
                             <button
                               key={tag}
                               onClick={() => setActiveTagFilter(tag)}
-                              className={`px-4 py-1 text-sm rounded-full transition-colors capitalize ${
-                                activeTagFilter === tag
-                                  ? "bg-brand-primary text-white"
-                                  : "bg-brand-surface hover:bg-brand-surface/70 text-brand-text-light"
-                              }`}
+                              className={`px-4 py-1 text-sm rounded-full transition-colors capitalize ${activeTagFilter === tag
+                                ? "bg-brand-primary text-white"
+                                : "bg-brand-surface hover:bg-brand-surface/70 text-brand-text-light"
+                                }`}
                             >
                               {tag}
                             </button>
@@ -919,9 +915,8 @@ const App: React.FC = () => {
                         aria-label="Refresh recommendations"
                       >
                         <svg
-                          className={`h-5 w-5 ${
-                            isRecsLoading ? "animate-spin" : ""
-                          }`}
+                          className={`h-5 w-5 ${isRecsLoading ? "animate-spin" : ""
+                            }`}
                           xmlns="http://www.w3.org/2000/svg"
                           fill="none"
                           viewBox="0 0 24 24"

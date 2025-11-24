@@ -1,6 +1,6 @@
 import React from "react";
-import { TMDB_IMAGE_BASE_URL } from "../constants";
-import type { Media } from "../types";
+import { TMDB_IMAGE_BASE_URL } from "../../constants/constants";
+import type { Media } from "../../types/types";
 
 interface MediaCardProps {
   media: Media;

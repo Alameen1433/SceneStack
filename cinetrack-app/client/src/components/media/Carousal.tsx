@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { TMDB_IMAGE_BASE_URL } from "../constants";
-import type { SearchResult } from "../types";
-import { getMediaImages } from "../services/tmdbService";
+import { TMDB_IMAGE_BASE_URL } from "../../constants/constants";
+import type { SearchResult } from "../../types/types";
+import { getMediaImages } from "../../services/tmdbService";
 
 interface CarouselProps {
     items: SearchResult[];

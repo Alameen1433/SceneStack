@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { TMDB_IMAGE_BASE_URL } from "../constants";
-import type { Media } from "../types";
+import { TMDB_IMAGE_BASE_URL } from "../../constants/constants";
+import type { Media } from "../../types/types";
 
 interface LoadingPosterAnimationProps {
   media: Media;

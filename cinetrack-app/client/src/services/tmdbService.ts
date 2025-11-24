@@ -1,4 +1,4 @@
-import { TMDB_API_BASE_URL } from "../constants";
+import { TMDB_API_BASE_URL } from "../constants/constants";
 import type {
   SearchResult,
   MovieDetail,
@@ -6,7 +6,7 @@ import type {
   SeasonDetail,
   WatchProvidersResponse,
   LogoImage,
-} from "../types";
+} from "../types/types";
 
 const TMDB_API_READ_ACCESS_TOKEN = import.meta.env.VITE_TMDB_API_READ_ACCESS_TOKEN;
 
