@@ -159,6 +159,20 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
         return Array.from(tags).sort();
     }, [watchlist]);
 
+    // Strip large data that's not needed for watchlist storage
+    const stripMediaForStorage = (media: MovieDetail | TVDetail): Partial<MovieDetail | TVDetail> => {
+        const copy = { ...media } as Record<string, unknown>;
+        // Remove large fields that aren't needed for watchlist
+        delete copy.images;
+        delete copy.videos;
+        delete copy.credits;
+        delete copy.keywords;
+        delete copy.recommendations;
+        delete copy.similar;
+        delete copy.reviews;
+        return copy as Partial<MovieDetail | TVDetail>;
+    };
+
     // Toggle watchlist from detail view
     const toggleWatchlist = useCallback(
         async (media: MovieDetail | TVDetail) => {
@@ -166,11 +180,12 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
                 await dbService.deleteWatchlistItem(media.id);
                 setWatchlist((prev) => prev.filter((item) => item.id !== media.id));
             } else {
+                const strippedMedia = stripMediaForStorage(media);
                 let newItem: WatchlistItem;
                 if (media.media_type === "movie") {
-                    newItem = { ...media, watched: false, tags: [] };
+                    newItem = { ...strippedMedia, watched: false, tags: [] } as WatchlistItem;
                 } else {
-                    newItem = { ...media, watchedEpisodes: {}, tags: [] };
+                    newItem = { ...strippedMedia, watchedEpisodes: {}, tags: [] } as WatchlistItem;
                 }
                 await dbService.putWatchlistItem(newItem);
                 setWatchlist((prev) => [...prev, newItem]);
@@ -386,8 +401,20 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
                             "Are you sure you want to overwrite your current watchlist? This action cannot be undone."
                         )
                     ) {
-                        await dbService.clearAndBulkPut(importedData);
-                        setWatchlist(importedData);
+                        // Strip large fields from imported items
+                        const strippedItems = importedData.map(item => {
+                            const copy = { ...item } as Record<string, unknown>;
+                            delete copy.images;
+                            delete copy.videos;
+                            delete copy.credits;
+                            delete copy.keywords;
+                            delete copy.recommendations;
+                            delete copy.similar;
+                            delete copy.reviews;
+                            return copy as unknown as WatchlistItem;
+                        });
+                        await dbService.clearAndBulkPut(strippedItems);
+                        setWatchlist(strippedItems);
                     }
                 } catch (err) {
                     setError(

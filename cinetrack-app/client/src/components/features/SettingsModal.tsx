@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
-import { useAuthContext } from "../../contexts/AuthContext";
-import { getAuthToken } from "../../contexts/AuthContext";
+import { useAuthContext, getAuthToken } from "../../contexts/AuthContext";
+import { ConfirmModal } from "../common/ConfirmModal";
 
 // API requests use relative URLs - Vite proxy handles forwarding in dev
 const API_BASE_URL = '';
@@ -69,6 +69,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -87,8 +88,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleLogout = () => {
-    logout();
-    onClose();
+    setShowLogoutConfirm(true);
   };
 
   const resetPasswordForm = () => {
@@ -354,6 +354,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </section>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={showLogoutConfirm}
+        title="Sign Out"
+        message="Are you sure you want to sign out of your account?"
+        confirmText="Sign Out"
+        cancelText="Cancel"
+        confirmStyle="danger"
+        onConfirm={() => {
+          logout();
+          onClose();
+          setShowLogoutConfirm(false);
+        }}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </div>
   );
 };
