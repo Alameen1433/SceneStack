@@ -24,7 +24,7 @@ export const LoadingPosterAnimation: React.FC<LoadingPosterAnimationProps> = ({
     height: rect.height,
     transition: "all 0.5s cubic-bezier(0.65, 0, 0.35, 1)",
     zIndex: 50,
-    borderRadius: "0.75rem", // 12px, same as MediaCard
+    borderRadius: "0.75rem", 
     overflow: "hidden",
     willChange: "top, left, width, height, transform, box-shadow",
   });

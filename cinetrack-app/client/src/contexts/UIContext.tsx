@@ -1,0 +1,232 @@
+import React, {
+    createContext,
+    useContext,
+    useState,
+    useCallback,
+    useEffect,
+    useMemo,
+    type ReactNode,
+} from "react";
+import { searchMedia, getMovieDetails, getTVDetails } from "../services/tmdbService";
+import type { SearchResult, MovieDetail, TVDetail, Media } from "../types/types";
+
+interface UIContextType {
+    activeTab: "discover" | "lists" | "recommendations";
+    setActiveTab: (tab: "discover" | "lists" | "recommendations") => void;
+
+    searchResults: SearchResult[];
+    isSearchLoading: boolean;
+    isSearchExpanded: boolean;
+    setIsSearchExpanded: (expanded: boolean) => void;
+    handleSearch: (query: string) => void;
+
+    selectedMediaId: string | null;
+    detailedMedia: MovieDetail | TVDetail | null;
+    animatingMedia: { media: Media; rect: DOMRect } | null;
+    handleSelectMedia: (media: Media, rect: DOMRect) => Promise<void>;
+    handleCloseModal: () => void;
+
+    isSettingsOpen: boolean;
+    openSettings: () => void;
+    closeSettings: () => void;
+
+    error: string | null;
+    setError: (error: string | null) => void;
+}
+
+const UIContext = createContext<UIContextType | undefined>(undefined);
+
+export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    const [activeTab, setActiveTab] = useState<"discover" | "lists" | "recommendations">("discover");
+
+    
+    const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+    const [isSearchLoading, setIsSearchLoading] = useState(false);
+    const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+    const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
+    const [detailedMedia, setDetailedMedia] = useState<MovieDetail | TVDetail | null>(null);
+    const [animatingMedia, setAnimatingMedia] = useState<{ media: Media; rect: DOMRect } | null>(null);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const performSearch = useCallback(async (query: string) => {
+        if (!query) {
+            setSearchResults([]);
+            return;
+        }
+        setIsSearchLoading(true);
+        setError(null);
+        try {
+            const results = await searchMedia(query);
+            setSearchResults(results.filter((r) => r.poster_path));
+        } catch (err) {
+            setError("Failed to fetch search results. Please try again.");
+            console.error(err);
+        } finally {
+            setIsSearchLoading(false);
+        }
+    }, []);
+
+    const handleSearch = useCallback(
+        (query: string) => {
+            const url = new URL(window.location.toString());
+            if (query) {
+                url.searchParams.set("q", query);
+            } else {
+                url.searchParams.delete("q");
+                setIsSearchExpanded(false);
+            }
+            window.history.pushState({}, "", url);
+            performSearch(query);
+        },
+        [performSearch]
+    );
+
+    // Handle browser back/forward
+    useEffect(() => {
+        const handleSearchPopState = () => {
+            const params = new URLSearchParams(window.location.search);
+            const query = params.get("q") || "";
+            performSearch(query);
+            if (!query) {
+                setIsSearchExpanded(false);
+            }
+        };
+
+        window.addEventListener("popstate", handleSearchPopState);
+
+        const initialParams = new URLSearchParams(window.location.search);
+        const initialQuery = initialParams.get("q");
+        if (initialQuery) {
+            performSearch(initialQuery);
+            setIsSearchExpanded(true);
+        }
+
+        return () => {
+            window.removeEventListener("popstate", handleSearchPopState);
+        };
+    }, [performSearch]);
+
+    // Handle browser back/forward for modals
+    useEffect(() => {
+        const handleModalPopState = () => {
+            const hash = window.location.hash;
+            if (!hash.startsWith("#media/") && !hash.startsWith("#settings")) {
+                setSelectedMediaId(null);
+                setDetailedMedia(null);
+                setAnimatingMedia(null);
+                setIsSettingsOpen(false);
+            }
+        };
+        window.addEventListener("popstate", handleModalPopState);
+        return () => {
+            window.removeEventListener("popstate", handleModalPopState);
+        };
+    }, []);
+
+    useEffect(() => {
+        const hash = window.location.hash;
+        if (hash.startsWith("#media/") || hash === "#settings") {
+            window.history.replaceState(
+                null,
+                "",
+                window.location.pathname + window.location.search
+            );
+        }
+    }, []);
+
+    // Select media and open detail modal
+    const handleSelectMedia = useCallback(
+        async (media: Media, rect: DOMRect) => {
+            if (animatingMedia) return;
+
+            window.history.pushState(
+                { modal: "mediaDetail" },
+                "",
+                `#media/${media.media_type}/${media.id}`
+            );
+
+            setAnimatingMedia({ media, rect });
+            setSelectedMediaId(`${media.media_type}-${media.id}`);
+            setError(null);
+            setDetailedMedia(null);
+
+            try {
+                let details: MovieDetail | TVDetail;
+                if (media.media_type === "movie") {
+                    details = await getMovieDetails(media.id);
+                } else {
+                    details = await getTVDetails(media.id);
+                }
+                setDetailedMedia(details);
+            } catch (err) {
+                setError("Failed to fetch media details.");
+                console.error(err);
+                window.history.back();
+            }
+        },
+        [animatingMedia]
+    );
+
+    const handleCloseModal = useCallback(() => {
+        window.history.back();
+    }, []);
+
+    const openSettings = useCallback(() => {
+        window.history.pushState({ modal: "settings" }, "", "#settings");
+        setIsSettingsOpen(true);
+    }, []);
+
+    const closeSettings = useCallback(() => {
+        window.history.back();
+    }, []);
+
+    const value = useMemo(
+        () => ({
+            activeTab,
+            setActiveTab,
+            searchResults,
+            isSearchLoading,
+            isSearchExpanded,
+            setIsSearchExpanded,
+            handleSearch,
+            selectedMediaId,
+            detailedMedia,
+            animatingMedia,
+            handleSelectMedia,
+            handleCloseModal,
+            isSettingsOpen,
+            openSettings,
+            closeSettings,
+            error,
+            setError,
+        }),
+        [
+            activeTab,
+            searchResults,
+            isSearchLoading,
+            isSearchExpanded,
+            handleSearch,
+            selectedMediaId,
+            detailedMedia,
+            animatingMedia,
+            handleSelectMedia,
+            handleCloseModal,
+            isSettingsOpen,
+            openSettings,
+            closeSettings,
+            error,
+        ]
+    );
+
+    return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
+};
+
+// eslint-disable-next-line react-refresh/only-export-components
+export const useUIContext = (): UIContextType => {
+    const context = useContext(UIContext);
+    if (context === undefined) {
+        throw new Error("useUIContext must be used within a UIProvider");
+    }
+    return context;
+};

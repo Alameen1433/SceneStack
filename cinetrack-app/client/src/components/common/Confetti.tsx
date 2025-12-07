@@ -11,11 +11,11 @@ export const Confetti: React.FC<{ onComplete: () => void }> = ({
 
   const colors = useMemo(
     () => [
-      "#3B82F6", // brand-primary
-      "#4F46E5", // brand-secondary
-      "#FBBF24", // yellow-400
-      "#EC4899", // pink-500
-      "#10B981", // emerald-500
+      "#3B82F6",
+      "#4F46E5", 
+      "#FBBF24", 
+      "#EC4899", 
+      "#10B981", 
     ],
     []
   );
