@@ -5,6 +5,7 @@ import { DiscoverProvider } from "./contexts/DiscoverContext";
 import { AuthProvider, useAuthContext } from "./contexts/AuthContext";
 import { AuthPage } from "./pages/AuthPage";
 import { SearchBar } from "./components/common/SearchBar";
+import { SearchPalette } from "./components/common/SearchPalette";
 import { LoadingPosterAnimation } from "./components/common/LoadingPosterAnimation";
 import { BottomNavBar } from "./components/layout/BottomNavBar";
 import { SideNavBar } from "./components/layout/SideNavBar";
@@ -46,7 +47,8 @@ const Header: React.FC = memo(() => {
           <div className="lg:hidden text-3xl font-black tracking-tighter text-white">
             Scene<span className="text-brand-secondary">Stack</span>
           </div>
-          <div className="w-full max-w-sm flex items-center gap-2 ml-auto">
+          {/* Tablet - Regular SearchBar */}
+          <div className="lg:hidden w-full max-w-sm flex items-center gap-2 ml-auto">
             <div className="flex-grow">
               <SearchBar onSearch={handleSearch} isLoading={isSearchLoading} />
             </div>
@@ -57,6 +59,10 @@ const Header: React.FC = memo(() => {
             >
               <SettingsIcon />
             </button>
+          </div>
+          {/* Desktop - Command Palette Search */}
+          <div className="hidden lg:flex w-full justify-center">
+            <SearchPalette onSearch={handleSearch} isLoading={isSearchLoading} />
           </div>
         </div>
 
@@ -157,17 +163,49 @@ const BackIcon: React.FC = () => (
 
 // Main content component
 const MainContent: React.FC = memo(() => {
-  const { activeTab, searchResults, selectedMediaId, handleSelectMedia, error } = useUIContext();
+  const { activeTab, searchResults, selectedMediaId, handleSelectMedia, error, handleSearch, isSearchLoading } = useUIContext();
   const { watchlistIds, isLoading: isDbLoading } = useWatchlistContext();
+
+  const handleBackToHome = () => {
+    handleSearch("");
+  };
 
   return (
     <main className="pb-24 lg:pb-0">
       <div className="container mx-auto p-4 sm:p-6 lg:p-8">
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
 
-        {searchResults.length > 0 ? (
+        {/* Search Loading State */}
+        {isSearchLoading && (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <div className="relative">
+              <div className="w-12 h-12 rounded-full border-2 border-brand-primary/20 border-t-brand-primary animate-spin" />
+            </div>
+            <p className="text-brand-text-dim animate-pulse">Searching...</p>
+          </div>
+        )}
+
+        {/* Search Results */}
+        {!isSearchLoading && searchResults.length > 0 ? (
           <section>
-            <h2 className="text-3xl font-bold mb-6 text-brand-text-light">Search Results</h2>
+            <div className="flex items-center gap-4 mb-6">
+              <button
+                onClick={handleBackToHome}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl text-brand-text-dim hover:text-white hover:bg-white/10 transition-all"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                <span className="text-sm font-medium">Back</span>
+              </button>
+              <div className="h-6 w-px bg-white/10" />
+              <h2 className="text-xl font-bold text-white">
+                Search Results
+                <span className="ml-2 text-sm font-normal text-brand-text-dim">
+                  ({searchResults.length} found)
+                </span>
+              </h2>
+            </div>
             <MediaGrid
               mediaItems={searchResults}
               onCardClick={handleSelectMedia}
@@ -175,11 +213,11 @@ const MainContent: React.FC = memo(() => {
               selectedMediaId={selectedMediaId}
             />
           </section>
-        ) : isDbLoading ? (
+        ) : !isSearchLoading && isDbLoading ? (
           <div className="text-center py-20 text-brand-text-dim">
             <p>Loading your watchlist...</p>
           </div>
-        ) : (
+        ) : !isSearchLoading && (
           <>
             {activeTab === "discover" && <DiscoverPage />}
             {activeTab === "lists" && <ListsPage />}
@@ -253,7 +291,7 @@ const Modals: React.FC = () => {
 
 // App layout component
 const AppLayout: React.FC = () => {
-  const { activeTab, setActiveTab, searchResults } = useUIContext();
+  const { activeTab, setActiveTab, searchResults, openSettings } = useUIContext();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useLocalStorage("sidebarCollapsed", false);
 
   return (
@@ -263,10 +301,11 @@ const AppLayout: React.FC = () => {
         onTabChange={setActiveTab}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+        onOpenSettings={openSettings}
       />
 
       <div
-        className={`transition-all duration-300 ease-in-out ${isSidebarCollapsed ? "lg:pl-20" : "lg:pl-64"
+        className={`transition-all duration-300 ease-out ${isSidebarCollapsed ? "lg:pl-[72px]" : "lg:pl-60"
           }`}
       >
         <Header />
