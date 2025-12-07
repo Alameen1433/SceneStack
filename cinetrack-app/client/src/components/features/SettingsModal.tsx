@@ -52,6 +52,84 @@ const PasswordInput: React.FC<{
   );
 };
 
+// Storage Stats component
+const StorageStats: React.FC = () => {
+  const [stats, setStats] = useState<{
+    user: { itemCount: number };
+    collection: { totalDocuments: number; storageSize: number; avgObjSize: number };
+    database: { name: string; dataSize: number };
+  } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const token = getAuthToken();
+        const response = await fetch('/api/stats', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) throw new Error('Failed to fetch stats');
+        const data = await response.json();
+        setStats(data);
+      } catch (err) {
+        setError('Unable to load storage info');
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  return (
+    <section className="pt-4 border-t border-white/10">
+      <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-brand-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+        </svg>
+        Storage Info
+      </h3>
+      {isLoading ? (
+        <div className="flex items-center justify-center py-4">
+          <svg className="animate-spin h-5 w-5 text-brand-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </div>
+      ) : error ? (
+        <p className="text-sm text-red-400">{error}</p>
+      ) : stats ? (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white/5 rounded-xl p-3">
+            <p className="text-xs text-brand-text-dim">Your Items</p>
+            <p className="text-lg font-bold text-white">{stats.user.itemCount}</p>
+          </div>
+          <div className="bg-white/5 rounded-xl p-3">
+            <p className="text-xs text-brand-text-dim">Storage Used</p>
+            <p className="text-lg font-bold text-white">{formatBytes(stats.database.dataSize)}</p>
+          </div>
+          <div className="bg-white/5 rounded-xl p-3 col-span-2">
+            <p className="text-xs text-brand-text-dim">Database</p>
+            <p className="text-sm font-medium text-white">{stats.database.name}</p>
+            <p className="text-xs text-brand-text-dim mt-1">
+              {stats.collection.totalDocuments} total items in collection
+            </p>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+};
+
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
@@ -345,6 +423,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               />
             </div>
           </section>
+
+          {/* Storage Stats */}
+          <StorageStats />
 
           {/* App Info */}
           <section className="pt-4 border-t border-white/10">
