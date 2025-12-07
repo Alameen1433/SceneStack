@@ -1,6 +1,5 @@
 import { useState, useEffect, type Dispatch, type SetStateAction } from "react";
 
-// FIX: Update the return type to use Dispatch and SetStateAction directly.
 export function useLocalStorage<T>(
   key: string,
   initialValue: T
@@ -17,11 +16,7 @@ export function useLocalStorage<T>(
 
   useEffect(() => {
     try {
-      const valueToStore =
-        typeof storedValue === "function"
-          ? storedValue(storedValue)
-          : storedValue;
-      window.localStorage.setItem(key, JSON.stringify(valueToStore));
+      window.localStorage.setItem(key, JSON.stringify(storedValue));
     } catch (error) {
       console.error(error);
     }
