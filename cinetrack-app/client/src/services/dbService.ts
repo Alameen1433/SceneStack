@@ -1,7 +1,8 @@
 import type { WatchlistItem } from "../types/types";
 import { getAuthToken } from "../contexts/AuthContext";
 
-const API_BASE_URL = import.meta.env.PROD ? '/api' : 'http://localhost:3001/api';
+// API requests use relative URLs - Vite proxy handles forwarding in dev
+const API_BASE_URL = '/api';
 
 const apiFetch = async <T>(
   endpoint: string,
