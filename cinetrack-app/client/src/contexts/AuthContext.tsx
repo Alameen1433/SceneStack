@@ -8,7 +8,8 @@ import React, {
     type ReactNode,
 } from "react";
 
-const API_BASE_URL = import.meta.env.PROD ? '' : 'http://localhost:3001';
+// API requests use relative URLs - Vite proxy handles forwarding in dev
+const API_BASE_URL = '';
 
 interface User {
     id: string;

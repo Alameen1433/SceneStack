@@ -245,6 +245,15 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
     fetchProviders();
   }, [media.id, media.media_type]);
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
+
   const trailer = useMemo(() => {
     const videos = media.videos?.results;
     if (!videos) return null;
@@ -350,11 +359,10 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
         </header>
 
         <main
-          className={`flex-grow overflow-y-auto w-full max-w-7xl mx-auto grid ${
-            media.media_type === "tv" && watchlistItem?.media_type === "tv"
+          className={`flex-grow overflow-y-auto w-full max-w-7xl mx-auto grid ${media.media_type === "tv" && watchlistItem?.media_type === "tv"
               ? "grid-cols-1 lg:grid-cols-[minmax(0,_2fr)_minmax(0,_1.5fr)]"
               : "grid-cols-1"
-          } gap-8 p-4 sm:p-6 lg:p-8`}
+            } gap-8 p-4 sm:p-6 lg:p-8`}
         >
           <div className="flex flex-col md:flex-row gap-8 items-start">
             <div className="w-full md:w-auto md:max-w-[300px] flex-shrink-0 mx-auto hidden md:block">

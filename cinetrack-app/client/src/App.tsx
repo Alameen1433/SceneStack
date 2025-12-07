@@ -337,24 +337,49 @@ const AuthenticatedApp: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-brand-bg flex items-center justify-center">
-        <div className="animate-pulse text-white text-xl">Loading...</div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 rounded-full border-2 border-brand-primary/20 border-t-brand-primary animate-spin" />
+          <p className="text-brand-text-dim animate-pulse">Loading...</p>
+        </div>
       </div>
     );
   }
 
   if (!isAuthenticated) {
-    return <AuthPage />;
+    return (
+      <div className="animate-fadeIn">
+        <AuthPage />
+      </div>
+    );
   }
 
   return (
-    <WatchlistProvider>
-      <UIProvider>
-        <DiscoverProvider>
-          <AppLayout />
-        </DiscoverProvider>
-      </UIProvider>
-    </WatchlistProvider>
+    <div className="animate-fadeIn">
+      <WatchlistProvider>
+        <UIProvider>
+          <DiscoverProvider>
+            <AppLayout />
+          </DiscoverProvider>
+        </UIProvider>
+      </WatchlistProvider>
+      <style>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: scale(0.98);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.4s ease-out;
+        }
+      `}</style>
+    </div>
   );
 };
 
 export default App;
+

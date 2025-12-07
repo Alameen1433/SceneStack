@@ -209,53 +209,77 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
 
     // Toggle movie watched status
     const toggleMovieWatched = useCallback(async (movieId: number) => {
-        setWatchlist((prev) => {
-            const itemToUpdate = prev.find(
-                (item) => item.id === movieId && item.media_type === "movie"
-            ) as MovieWatchlistItem | undefined;
+        const itemToUpdate = watchlist.find(
+            (item) => item.id === movieId && item.media_type === "movie"
+        ) as MovieWatchlistItem | undefined;
 
-            if (!itemToUpdate) return prev;
+        if (!itemToUpdate) return;
 
-            const updatedItem = { ...itemToUpdate, watched: !itemToUpdate.watched };
-            dbService.putWatchlistItem(updatedItem);
+        const updatedItem = { ...itemToUpdate, watched: !itemToUpdate.watched };
 
-            return prev.map((item) => (item.id === movieId ? updatedItem : item));
-        });
-    }, []);
+        // Optimistically update state
+        setWatchlist((prev) =>
+            prev.map((item) => (item.id === movieId ? updatedItem : item))
+        );
+
+        // Persist to database
+        try {
+            await dbService.putWatchlistItem(updatedItem);
+        } catch (err) {
+            // Revert on failure
+            setWatchlist((prev) =>
+                prev.map((item) => (item.id === movieId ? itemToUpdate : item))
+            );
+            setError("Failed to save progress. Please try again.");
+            console.error(err);
+        }
+    }, [watchlist]);
 
     // Toggle episode watched status
     const toggleEpisodeWatched = useCallback(
         async (tvId: number, seasonNumber: number, episodeNumber: number) => {
-            setWatchlist((prev) => {
-                const itemToUpdate = prev.find(
-                    (item) => item.id === tvId && item.media_type === "tv"
-                ) as TVWatchlistItem | undefined;
+            const itemToUpdate = watchlist.find(
+                (item) => item.id === tvId && item.media_type === "tv"
+            ) as TVWatchlistItem | undefined;
 
-                if (!itemToUpdate) return prev;
+            if (!itemToUpdate) return;
 
-                const newWatchedEpisodes = { ...(itemToUpdate.watchedEpisodes || {}) };
-                const seasonEpisodes = newWatchedEpisodes[seasonNumber]
-                    ? [...newWatchedEpisodes[seasonNumber]]
-                    : [];
-                const episodeIndex = seasonEpisodes.indexOf(episodeNumber);
+            const newWatchedEpisodes = { ...(itemToUpdate.watchedEpisodes || {}) };
+            const seasonEpisodes = newWatchedEpisodes[seasonNumber]
+                ? [...newWatchedEpisodes[seasonNumber]]
+                : [];
+            const episodeIndex = seasonEpisodes.indexOf(episodeNumber);
 
-                if (episodeIndex > -1) {
-                    seasonEpisodes.splice(episodeIndex, 1);
-                } else {
-                    seasonEpisodes.push(episodeNumber);
-                }
-                newWatchedEpisodes[seasonNumber] = seasonEpisodes;
+            if (episodeIndex > -1) {
+                seasonEpisodes.splice(episodeIndex, 1);
+            } else {
+                seasonEpisodes.push(episodeNumber);
+            }
+            newWatchedEpisodes[seasonNumber] = seasonEpisodes;
 
-                const updatedItem = {
-                    ...itemToUpdate,
-                    watchedEpisodes: newWatchedEpisodes,
-                };
-                dbService.putWatchlistItem(updatedItem);
+            const updatedItem = {
+                ...itemToUpdate,
+                watchedEpisodes: newWatchedEpisodes,
+            };
 
-                return prev.map((item) => (item.id === tvId ? updatedItem : item));
-            });
+            // Optimistically update state
+            setWatchlist((prev) =>
+                prev.map((item) => (item.id === tvId ? updatedItem : item))
+            );
+
+            // Persist to database
+            try {
+                await dbService.putWatchlistItem(updatedItem);
+            } catch (err) {
+                // Revert on failure
+                setWatchlist((prev) =>
+                    prev.map((item) => (item.id === tvId ? itemToUpdate : item))
+                );
+                setError("Failed to save progress. Please try again.");
+                console.error(err);
+            }
         },
-        []
+        [watchlist]
     );
 
     // Toggle entire season watched
@@ -265,32 +289,44 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
             seasonNumber: number,
             allEpisodeNumbers: number[]
         ) => {
-            setWatchlist((prev) => {
-                const itemToUpdate = prev.find(
-                    (item) => item.id === tvId && item.media_type === "tv"
-                ) as TVWatchlistItem | undefined;
+            const itemToUpdate = watchlist.find(
+                (item) => item.id === tvId && item.media_type === "tv"
+            ) as TVWatchlistItem | undefined;
 
-                if (!itemToUpdate) return prev;
+            if (!itemToUpdate) return;
 
-                const newWatchedEpisodes = { ...(itemToUpdate.watchedEpisodes || {}) };
-                const seasonEpisodes = newWatchedEpisodes[seasonNumber] || [];
+            const newWatchedEpisodes = { ...(itemToUpdate.watchedEpisodes || {}) };
+            const seasonEpisodes = newWatchedEpisodes[seasonNumber] || [];
 
-                if (seasonEpisodes.length === allEpisodeNumbers.length) {
-                    newWatchedEpisodes[seasonNumber] = [];
-                } else {
-                    newWatchedEpisodes[seasonNumber] = allEpisodeNumbers;
-                }
+            if (seasonEpisodes.length === allEpisodeNumbers.length) {
+                newWatchedEpisodes[seasonNumber] = [];
+            } else {
+                newWatchedEpisodes[seasonNumber] = allEpisodeNumbers;
+            }
 
-                const updatedItem = {
-                    ...itemToUpdate,
-                    watchedEpisodes: newWatchedEpisodes,
-                };
-                dbService.putWatchlistItem(updatedItem);
+            const updatedItem = {
+                ...itemToUpdate,
+                watchedEpisodes: newWatchedEpisodes,
+            };
 
-                return prev.map((item) => (item.id === tvId ? updatedItem : item));
-            });
+            // Optimistically update state
+            setWatchlist((prev) =>
+                prev.map((item) => (item.id === tvId ? updatedItem : item))
+            );
+
+            // Persist to database
+            try {
+                await dbService.putWatchlistItem(updatedItem);
+            } catch (err) {
+                // Revert on failure
+                setWatchlist((prev) =>
+                    prev.map((item) => (item.id === tvId ? itemToUpdate : item))
+                );
+                setError("Failed to save progress. Please try again.");
+                console.error(err);
+            }
         },
-        []
+        [watchlist]
     );
 
     // Update tags

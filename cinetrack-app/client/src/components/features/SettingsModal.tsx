@@ -1,8 +1,9 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { useAuthContext } from "../../contexts/AuthContext";
 import { getAuthToken } from "../../contexts/AuthContext";
 
-const API_BASE_URL = import.meta.env.PROD ? '' : 'http://localhost:3001';
+// API requests use relative URLs - Vite proxy handles forwarding in dev
+const API_BASE_URL = '';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -68,6 +69,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -143,13 +154,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onClick={onClose}
       aria-modal="true"
       role="dialog"
     >
       <div
-        className="bg-brand-surface rounded-2xl shadow-2xl w-full max-w-md p-6 text-brand-text-light max-h-[90vh] overflow-y-auto"
+        className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl shadow-2xl w-full max-w-md p-6 text-brand-text-light max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
