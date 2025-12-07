@@ -2,6 +2,8 @@ import React, { Suspense, lazy, memo } from "react";
 import { WatchlistProvider, useWatchlistContext } from "./contexts/WatchlistContext";
 import { UIProvider, useUIContext } from "./contexts/UIContext";
 import { DiscoverProvider } from "./contexts/DiscoverContext";
+import { AuthProvider, useAuthContext } from "./contexts/AuthContext";
+import { AuthPage } from "./pages/AuthPage";
 import { SearchBar } from "./components/common/SearchBar";
 import { LoadingPosterAnimation } from "./components/common/LoadingPosterAnimation";
 import { BottomNavBar } from "./components/layout/BottomNavBar";
@@ -282,6 +284,29 @@ const AppLayout: React.FC = () => {
 
 // Main App component
 const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <AuthenticatedApp />
+    </AuthProvider>
+  );
+};
+
+// Renders either AuthPage or the main app based on auth state
+const AuthenticatedApp: React.FC = () => {
+  const { isAuthenticated, isLoading } = useAuthContext();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-brand-bg flex items-center justify-center">
+        <div className="animate-pulse text-white text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <AuthPage />;
+  }
+
   return (
     <WatchlistProvider>
       <UIProvider>

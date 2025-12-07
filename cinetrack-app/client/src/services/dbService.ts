@@ -1,15 +1,25 @@
 import type { WatchlistItem } from "../types/types";
+import { getAuthToken } from "../contexts/AuthContext";
+
 const API_BASE_URL = import.meta.env.PROD ? '/api' : 'http://localhost:3001/api';
 
 const apiFetch = async <T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> => {
+  const token = getAuthToken();
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
+    headers,
     ...options,
   });
 
@@ -23,7 +33,6 @@ const apiFetch = async <T>(
     );
   }
 
-  // For 204 No Content, response.json() will fail.
   if (response.status === 204) {
     return undefined as T;
   }
@@ -41,13 +50,10 @@ export const getWatchlistItem = async (
   try {
     return await apiFetch<WatchlistItem>(`/watchlist/${id}`);
   } catch (error) {
-    // If the item is not found (404), the API fetch will throw.
-    // We can check the message or just return undefined for simplicity.
     if (error instanceof Error && error.message.includes("404")) {
       return undefined;
     }
     console.error(`Failed to get item ${id}:`, error);
-    // Re-throw other errors
     throw error;
   }
 };
