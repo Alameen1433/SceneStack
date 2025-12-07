@@ -168,6 +168,39 @@ app.post("/api/watchlist/import", authMiddleware, async (req, res) => {
   }
 });
 
+// GET /api/stats - Get database storage stats
+app.get("/api/stats", authMiddleware, async (req, res) => {
+  try {
+    const userItemCount = await watchlistCollection.countDocuments({ userId: req.userId });
+    const totalDocuments = await watchlistCollection.countDocuments();
+    const db = client.db("scenestackDB");
+    let dbStats = null;
+    try {
+      dbStats = await db.stats();
+    } catch (statsErr) {
+      console.log("Could not get database stats:", statsErr.message);
+    }
+
+    res.json({
+      user: {
+        itemCount: userItemCount,
+      },
+      collection: {
+        totalDocuments: totalDocuments,
+        storageSize: dbStats?.storageSize || 0,
+        avgObjSize: dbStats?.avgObjSize || 0,
+      },
+      database: {
+        name: dbStats?.db || "scenestackDB",
+        dataSize: dbStats?.dataSize || 0,
+      }
+    });
+  } catch (err) {
+    console.error("Stats error:", err);
+    res.status(500).json({ message: "Failed to retrieve database stats." });
+  }
+});
+
 // --- Catch-all for SPA ---
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "../../client/dist/index.html"));
