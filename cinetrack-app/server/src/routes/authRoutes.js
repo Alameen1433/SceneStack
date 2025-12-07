@@ -6,7 +6,7 @@ const { JWT_SECRET, authMiddleware } = require("../middleware/authMiddleware");
 const router = express.Router();
 
 // Valid invite codes from environment
-const INVITE_CODES = (process.env.INVITE_CODES || "SCENESTACK2024").split(",").map(c => c.trim());
+const INVITE_CODES = (process.env.INVITE_CODES).split(",").map(c => c.trim());
 
 module.exports = (usersCollection) => {
     // POST /api/auth/register

@@ -17,6 +17,15 @@ app.use(
   })
 );
 app.use(express.json());
+
+// Disable caching for API routes
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
+
 app.use(express.static(path.join(__dirname, "../../client/dist")));
 
 // --- MongoDB Connection ---
@@ -103,7 +112,9 @@ app.put("/api/watchlist", authMiddleware, async (req, res) => {
       return res.status(400).json({ message: "Invalid item data." });
     }
 
-    const itemWithUser = { ...item, userId: req.userId };
+    const { _id, ...itemWithoutId } = item;
+    const itemWithUser = { ...itemWithoutId, userId: req.userId };
+
     await watchlistCollection.replaceOne(
       { id: item.id, userId: req.userId },
       itemWithUser,
