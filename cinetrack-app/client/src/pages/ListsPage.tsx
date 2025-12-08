@@ -2,6 +2,7 @@ import React, { memo } from "react";
 import { useWatchlistContext } from "../contexts/WatchlistContext";
 import { useUIContext } from "../contexts/UIContext";
 import { MediaSection } from "../components/common/MediaSection";
+import { HorizontalMediaScroll } from "../components/common/HorizontalMediaScroll";
 
 export const ListsPage: React.FC = memo(() => {
     const {
@@ -27,8 +28,8 @@ export const ListsPage: React.FC = memo(() => {
                         <button
                             onClick={() => setActiveTagFilter(null)}
                             className={`px-4 py-1 text-sm rounded-full transition-colors ${!activeTagFilter
-                                    ? "bg-brand-primary text-white"
-                                    : "bg-brand-surface hover:bg-brand-surface/70 text-brand-text-light"
+                                ? "bg-brand-primary text-white"
+                                : "bg-brand-surface hover:bg-brand-surface/70 text-brand-text-light"
                                 }`}
                         >
                             All
@@ -38,8 +39,8 @@ export const ListsPage: React.FC = memo(() => {
                                 key={tag}
                                 onClick={() => setActiveTagFilter(tag)}
                                 className={`px-4 py-1 text-sm rounded-full transition-colors capitalize ${activeTagFilter === tag
-                                        ? "bg-brand-primary text-white"
-                                        : "bg-brand-surface hover:bg-brand-surface/70 text-brand-text-light"
+                                    ? "bg-brand-primary text-white"
+                                    : "bg-brand-surface hover:bg-brand-surface/70 text-brand-text-light"
                                     }`}
                             >
                                 {tag}
@@ -49,7 +50,8 @@ export const ListsPage: React.FC = memo(() => {
                 </div>
             )}
             <div className="space-y-12">
-                <MediaSection
+                {/* Currently Watching - Horizontal scroll */}
+                <HorizontalMediaScroll
                     title="Currently Watching 🎦"
                     items={currentlyWatchingItems}
                     progressMap={progressMap}
@@ -58,6 +60,7 @@ export const ListsPage: React.FC = memo(() => {
                     emptyMessage="Nothing is currently being watched."
                     selectedMediaId={selectedMediaId}
                 />
+                {/* My List - Pagination */}
                 <MediaSection
                     title="My List 🗒"
                     items={watchlistItems}
@@ -66,7 +69,9 @@ export const ListsPage: React.FC = memo(() => {
                     emptyMessage="Your list is empty."
                     emptySubMessage="Use the search bar to find movies and shows to add."
                     selectedMediaId={selectedMediaId}
+                    enablePagination
                 />
+                {/* Watched - Pagination */}
                 <MediaSection
                     title="Watched ✅"
                     items={watchedItems}
@@ -74,6 +79,7 @@ export const ListsPage: React.FC = memo(() => {
                     watchlistIds={watchlistIds}
                     emptyMessage="You haven't marked any items as watched yet."
                     selectedMediaId={selectedMediaId}
+                    enablePagination
                 />
             </div>
         </>
@@ -81,3 +87,4 @@ export const ListsPage: React.FC = memo(() => {
 });
 
 ListsPage.displayName = "ListsPage";
+

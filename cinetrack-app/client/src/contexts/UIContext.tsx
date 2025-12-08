@@ -30,6 +30,11 @@ interface UIContextType {
     openSettings: () => void;
     closeSettings: () => void;
 
+    // View All section state
+    viewAllSection: { title: string; items: Media[] } | null;
+    openViewAll: (title: string, items: Media[]) => void;
+    closeViewAll: () => void;
+
     error: string | null;
     setError: (error: string | null) => void;
 }
@@ -47,6 +52,7 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [detailedMedia, setDetailedMedia] = useState<MovieDetail | TVDetail | null>(null);
     const [animatingMedia, setAnimatingMedia] = useState<{ media: Media; rect: DOMRect } | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [viewAllSection, setViewAllSection] = useState<{ title: string; items: Media[] } | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     const performSearch = useCallback(async (query: string) => {
@@ -111,11 +117,12 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     useEffect(() => {
         const handleModalPopState = () => {
             const hash = window.location.hash;
-            if (!hash.startsWith("#media/") && !hash.startsWith("#settings")) {
+            if (!hash.startsWith("#media/") && !hash.startsWith("#settings") && !hash.startsWith("#viewall/")) {
                 setSelectedMediaId(null);
                 setDetailedMedia(null);
                 setAnimatingMedia(null);
                 setIsSettingsOpen(false);
+                setViewAllSection(null);
             }
         };
         window.addEventListener("popstate", handleModalPopState);
@@ -126,7 +133,7 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
     useEffect(() => {
         const hash = window.location.hash;
-        if (hash.startsWith("#media/") || hash === "#settings") {
+        if (hash.startsWith("#media/") || hash === "#settings" || hash.startsWith("#viewall/")) {
             window.history.replaceState(
                 null,
                 "",
@@ -181,6 +188,16 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         window.history.back();
     }, []);
 
+    const openViewAll = useCallback((title: string, items: Media[]) => {
+        const sectionSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+        window.history.pushState({ viewAll: sectionSlug }, "", `#viewall/${sectionSlug}`);
+        setViewAllSection({ title, items });
+    }, []);
+
+    const closeViewAll = useCallback(() => {
+        window.history.back();
+    }, []);
+
     const value = useMemo(
         () => ({
             activeTab,
@@ -198,6 +215,9 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
             isSettingsOpen,
             openSettings,
             closeSettings,
+            viewAllSection,
+            openViewAll,
+            closeViewAll,
             error,
             setError,
         }),
@@ -215,6 +235,9 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
             isSettingsOpen,
             openSettings,
             closeSettings,
+            viewAllSection,
+            openViewAll,
+            closeViewAll,
             error,
         ]
     );

@@ -16,6 +16,7 @@ import { DiscoverPage } from "./pages/DiscoverPage";
 import { ListsPage } from "./pages/ListsPage";
 import { RecommendationsPage } from "./pages/RecommendationsPage";
 import { StatisticsPage } from "./pages/StatisticsPage";
+import { ViewAllPage } from "./pages/ViewAllPage";
 
 // Lazy load heavy modal components
 const MediaDetailModal = lazy(() =>
@@ -350,14 +351,36 @@ const Modals: React.FC = () => {
 
 // App layout component
 const AppLayout: React.FC = () => {
-  const { activeTab, setActiveTab, searchResults, openSettings } = useUIContext();
+  const { activeTab, setActiveTab, searchResults, openSettings, viewAllSection, closeViewAll, handleSearch } = useUIContext();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useLocalStorage("sidebarCollapsed", false);
+
+  // Handle tab change - clear search results if any
+  const handleTabChange = (tab: "discover" | "lists" | "recommendations" | "stats") => {
+    if (searchResults.length > 0) {
+      handleSearch(""); // Clear search results
+    }
+    setActiveTab(tab);
+  };
+
+  // If viewing all items in a section, render the ViewAllPage
+  if (viewAllSection) {
+    return (
+      <div className="min-h-screen bg-brand-bg text-brand-text-light font-sans">
+        <ViewAllPage
+          title={viewAllSection.title}
+          items={viewAllSection.items}
+          onClose={closeViewAll}
+        />
+        <Modals />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-brand-bg text-brand-text-light font-sans">
       <SideNavBar
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
         onOpenSettings={openSettings}
@@ -372,7 +395,7 @@ const AppLayout: React.FC = () => {
       </div>
 
       {searchResults.length === 0 && (
-        <BottomNavBar activeTab={activeTab} onTabChange={setActiveTab} />
+        <BottomNavBar activeTab={activeTab} onTabChange={handleTabChange} />
       )}
 
       <Modals />
