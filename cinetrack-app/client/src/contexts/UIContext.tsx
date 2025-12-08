@@ -11,8 +11,8 @@ import { searchMedia, getMovieDetails, getTVDetails } from "../services/tmdbServ
 import type { SearchResult, MovieDetail, TVDetail, Media } from "../types/types";
 
 interface UIContextType {
-    activeTab: "discover" | "lists" | "recommendations";
-    setActiveTab: (tab: "discover" | "lists" | "recommendations") => void;
+    activeTab: "discover" | "lists" | "recommendations" | "stats";
+    setActiveTab: (tab: "discover" | "lists" | "recommendations" | "stats") => void;
 
     searchResults: SearchResult[];
     isSearchLoading: boolean;
@@ -37,9 +37,9 @@ interface UIContextType {
 const UIContext = createContext<UIContextType | undefined>(undefined);
 
 export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [activeTab, setActiveTab] = useState<"discover" | "lists" | "recommendations">("discover");
+    const [activeTab, setActiveTab] = useState<"discover" | "lists" | "recommendations" | "stats">("discover");
 
-    
+
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [isSearchLoading, setIsSearchLoading] = useState(false);
     const [isSearchExpanded, setIsSearchExpanded] = useState(false);

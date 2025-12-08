@@ -15,6 +15,7 @@ import { getTVSeasonDetails } from "./services/tmdbService";
 import { DiscoverPage } from "./pages/DiscoverPage";
 import { ListsPage } from "./pages/ListsPage";
 import { RecommendationsPage } from "./pages/RecommendationsPage";
+import { StatisticsPage } from "./pages/StatisticsPage";
 
 // Lazy load heavy modal components
 const MediaDetailModal = lazy(() =>
@@ -222,6 +223,7 @@ const MainContent: React.FC = memo(() => {
             {activeTab === "discover" && <DiscoverPage />}
             {activeTab === "lists" && <ListsPage />}
             {activeTab === "recommendations" && <RecommendationsPage />}
+            {activeTab === "stats" && <StatisticsPage />}
           </>
         )}
       </div>
