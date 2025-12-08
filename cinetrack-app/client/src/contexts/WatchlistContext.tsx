@@ -1,12 +1,11 @@
-import React, {
-    createContext,
-    useContext,
+import {
     useState,
     useCallback,
     useEffect,
     useMemo,
     type ReactNode,
 } from "react";
+import { createContext, useContextSelector } from "use-context-selector";
 import * as dbService from "../services/dbService";
 import { getMovieDetails, getTVDetails } from "../services/tmdbService";
 import type {
@@ -162,7 +161,6 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
     // Strip large data that's not needed for watchlist storage
     const stripMediaForStorage = (media: MovieDetail | TVDetail): Partial<MovieDetail | TVDetail> => {
         const copy = { ...media } as Record<string, unknown>;
-        // Remove large fields that aren't needed for watchlist
         delete copy.images;
         delete copy.videos;
         delete copy.credits;
@@ -232,16 +230,13 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
 
         const updatedItem = { ...itemToUpdate, watched: !itemToUpdate.watched };
 
-        // Optimistically update state
         setWatchlist((prev) =>
             prev.map((item) => (item.id === movieId ? updatedItem : item))
         );
 
-        // Persist to database
         try {
             await dbService.putWatchlistItem(updatedItem);
         } catch (err) {
-            // Revert on failure
             setWatchlist((prev) =>
                 prev.map((item) => (item.id === movieId ? itemToUpdate : item))
             );
@@ -277,16 +272,13 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
                 watchedEpisodes: newWatchedEpisodes,
             };
 
-            // Optimistically update state
             setWatchlist((prev) =>
                 prev.map((item) => (item.id === tvId ? updatedItem : item))
             );
 
-            // Persist to database
             try {
                 await dbService.putWatchlistItem(updatedItem);
             } catch (err) {
-                // Revert on failure
                 setWatchlist((prev) =>
                     prev.map((item) => (item.id === tvId ? itemToUpdate : item))
                 );
@@ -324,16 +316,13 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
                 watchedEpisodes: newWatchedEpisodes,
             };
 
-            // Optimistically update state
             setWatchlist((prev) =>
                 prev.map((item) => (item.id === tvId ? updatedItem : item))
             );
 
-            // Persist to database
             try {
                 await dbService.putWatchlistItem(updatedItem);
             } catch (err) {
-                // Revert on failure
                 setWatchlist((prev) =>
                     prev.map((item) => (item.id === tvId ? itemToUpdate : item))
                 );
@@ -401,7 +390,6 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
                             "Are you sure you want to overwrite your current watchlist? This action cannot be undone."
                         )
                     ) {
-                        // Strip large fields from imported items
                         const strippedItems = importedData.map(item => {
                             const copy = { ...item } as Record<string, unknown>;
                             delete copy.images;
@@ -484,9 +472,17 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
     );
 };
 
+// ============================================================================
+// HOOKS
+// ============================================================================
+
+/**
+ * Full context hook - returns all values (backward compatible)
+ * Use this when you need multiple values or when performance isn't critical
+ */
 // eslint-disable-next-line react-refresh/only-export-components
 export const useWatchlistContext = (): WatchlistContextType => {
-    const context = useContext(WatchlistContext);
+    const context = useContextSelector(WatchlistContext, (ctx) => ctx);
     if (context === undefined) {
         throw new Error(
             "useWatchlistContext must be used within a WatchlistProvider"
@@ -494,3 +490,71 @@ export const useWatchlistContext = (): WatchlistContextType => {
     }
     return context;
 };
+
+// ============================================================================
+// GRANULAR SELECTOR HOOKS - Use these for better performance
+// ============================================================================
+
+/**
+ * Returns only watchlistIds - use when you only need to check if items are in watchlist
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export const useWatchlistIds = (): Set<number> => {
+    const ids = useContextSelector(WatchlistContext, (ctx) => ctx?.watchlistIds);
+    if (ids === undefined) {
+        throw new Error("useWatchlistIds must be used within a WatchlistProvider");
+    }
+    return ids;
+};
+
+/**
+ * Returns isLoading state
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export const useWatchlistLoading = (): boolean => {
+    const isLoading = useContextSelector(WatchlistContext, (ctx) => ctx?.isLoading);
+    if (isLoading === undefined) {
+        throw new Error("useWatchlistLoading must be used within a WatchlistProvider");
+    }
+    return isLoading;
+};
+
+/**
+ * Returns the full watchlist array
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export const useWatchlist = (): WatchlistItem[] => {
+    const watchlist = useContextSelector(WatchlistContext, (ctx) => ctx?.watchlist);
+    if (watchlist === undefined) {
+        throw new Error("useWatchlist must be used within a WatchlistProvider");
+    }
+    return watchlist;
+};
+
+/**
+ * Returns progress map for currently watching items
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export const useProgressMap = (): Record<string, number> => {
+    const progressMap = useContextSelector(WatchlistContext, (ctx) => ctx?.progressMap);
+    if (progressMap === undefined) {
+        throw new Error("useProgressMap must be used within a WatchlistProvider");
+    }
+    return progressMap;
+};
+
+/**
+ * Custom selector hook - use for any custom selection
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function useWatchlistSelector<T>(
+    selector: (ctx: WatchlistContextType) => T
+): T {
+    const result = useContextSelector(WatchlistContext, (ctx) => {
+        if (ctx === undefined) {
+            throw new Error("useWatchlistSelector must be used within a WatchlistProvider");
+        }
+        return selector(ctx);
+    });
+    return result;
+}

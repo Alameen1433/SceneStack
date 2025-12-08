@@ -1,4 +1,5 @@
 import React, { Suspense, lazy, memo } from "react";
+import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import { WatchlistProvider, useWatchlistContext } from "./contexts/WatchlistContext";
 import { UIProvider, useUIContext } from "./contexts/UIContext";
 import { DiscoverProvider } from "./contexts/DiscoverContext";
@@ -406,9 +407,11 @@ const AppLayout: React.FC = () => {
 // Main App component
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <AuthenticatedApp />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AuthenticatedApp />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 };
 

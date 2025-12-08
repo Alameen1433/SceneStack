@@ -12,7 +12,7 @@ interface PaginatedMediaModalProps {
     selectedMediaId: string | null;
 }
 
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 24;
 
 export const PaginatedMediaModal: React.FC<PaginatedMediaModalProps> = ({
     title,

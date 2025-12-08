@@ -1,53 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Scene Stack Watchlist</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              'sans': ['Poppins', 'sans-serif'],
-            },
-            colors: {
-              'brand-bg': '#0D0C11',
-              'brand-surface': '#1F2937',
-              'brand-primary': '#4338CA', // indigo-700
-              'brand-secondary': '#4F46E5', // indigo-600
-              'brand-text-light': '#F9FAFB',
-              'brand-text-dim': '#9CA3AF',
-            }
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Scene Stack Watchlist</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            'sans': ['Poppins', 'sans-serif'],
+          },
+          colors: {
+            'brand-bg': '#0D0C11',
+            'brand-surface': '#1F2937',
+            'brand-primary': '#4338CA', // indigo-700
+            'brand-secondary': '#4F46E5', // indigo-600
+            'brand-text-light': '#F9FAFB',
+            'brand-text-dim': '#9CA3AF',
           }
         }
       }
-    </script>
-    <style>
-      body {
-        /* Safe area for notched devices */
-        padding-top: env(safe-area-inset-top);
-        padding-left: env(safe-area-inset-left);
-        padding-right: env(safe-area-inset-right);
-      }
-    </style>
-<script type="importmap">
+    }
+  </script>
+  <style>
+    body {
+      /* Safe area for notched devices */
+      padding-top: env(safe-area-inset-top);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+    }
+  </style>
+  <script type="importmap">
 {
   "imports": {
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "idb": "https://esm.sh/idb@8"
+    "react": "https://esm.sh/react@19",
+    "react/": "https://esm.sh/react@19/",
+    "react-dom": "https://esm.sh/react-dom@19",
+    "react-dom/": "https://esm.sh/react-dom@19/"
   }
 }
 </script>
 </head>
-  <body class="bg-brand-bg">
-    <div id="root"></div>
-    <script type="module" src="src/index.tsx"></script>
-  </body>
+
+<body class="bg-brand-bg">
+  <div id="root"></div>
+  <script type="module" src="src/index.tsx"></script>
+</body>
+
 </html>

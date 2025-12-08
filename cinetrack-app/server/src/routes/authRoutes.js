@@ -5,8 +5,15 @@ const { JWT_SECRET, authMiddleware } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-// Valid invite codes from environment
-const INVITE_CODES = (process.env.INVITE_CODES).split(",").map(c => c.trim());
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const INVITE_CODES = (process.env.INVITE_CODES || "")
+    .split(",")
+    .map(c => c.trim())
+    .filter(Boolean);
+
+if (INVITE_CODES.length === 0) {
+    console.warn("WARNING: No invite codes configured. Registration will fail.");
+}
 
 module.exports = (usersCollection) => {
     // POST /api/auth/register
@@ -14,33 +21,31 @@ module.exports = (usersCollection) => {
         try {
             const { email, password, inviteCode } = req.body;
 
-            // Validate input
             if (!email || !password || !inviteCode) {
                 return res.status(400).json({ message: "Email, password, and invite code are required" });
             }
 
-            // Validate invite code
+            if (!EMAIL_REGEX.test(email)) {
+                return res.status(400).json({ message: "Invalid email format" });
+            }
+
             if (!INVITE_CODES.includes(inviteCode)) {
                 return res.status(403).json({ message: "Invalid invite code" });
             }
 
-            // Check if user exists
             const existingUser = await usersCollection.findOne({ email: email.toLowerCase() });
             if (existingUser) {
                 return res.status(409).json({ message: "Email already registered" });
             }
 
-            // Hash password
             const passwordHash = await bcrypt.hash(password, 10);
 
-            // Create user
             const result = await usersCollection.insertOne({
                 email: email.toLowerCase(),
                 passwordHash,
                 createdAt: new Date(),
             });
 
-            // Generate token
             const token = jwt.sign({ userId: result.insertedId.toString() }, JWT_SECRET, {
                 expiresIn: "7d",
             });
@@ -61,24 +66,24 @@ module.exports = (usersCollection) => {
         try {
             const { email, password } = req.body;
 
-            // Validate input
             if (!email || !password) {
                 return res.status(400).json({ message: "Email and password are required" });
             }
 
-            // Find user
+            if (!EMAIL_REGEX.test(email)) {
+                return res.status(400).json({ message: "Invalid email format" });
+            }
+
             const user = await usersCollection.findOne({ email: email.toLowerCase() });
             if (!user) {
                 return res.status(401).json({ message: "Invalid email or password" });
             }
 
-            // Verify password
             const isValid = await bcrypt.compare(password, user.passwordHash);
             if (!isValid) {
                 return res.status(401).json({ message: "Invalid email or password" });
             }
 
-            // Generate token
             const token = jwt.sign({ userId: user._id.toString() }, JWT_SECRET, {
                 expiresIn: "7d",
             });

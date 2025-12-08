@@ -1,10 +1,10 @@
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { MediaCard } from "../components/media/MediaCard";
-import { useWatchlistContext } from "../contexts/WatchlistContext";
+import { useWatchlistIds, useProgressMap } from "../contexts/WatchlistContext";
 import { useUIContext } from "../contexts/UIContext";
 import type { Media } from "../types/types";
 
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 24;
 
 interface ViewAllPageProps {
     title: string;
@@ -17,7 +17,8 @@ export const ViewAllPage: React.FC<ViewAllPageProps> = ({
     items,
     onClose,
 }) => {
-    const { watchlistIds, progressMap } = useWatchlistContext();
+    const watchlistIds = useWatchlistIds();
+    const progressMap = useProgressMap();
     const { handleSelectMedia, selectedMediaId } = useUIContext();
     const [currentPage, setCurrentPage] = useState(1);
 

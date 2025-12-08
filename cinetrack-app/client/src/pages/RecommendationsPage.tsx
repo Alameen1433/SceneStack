@@ -1,8 +1,9 @@
-import React, { memo, useEffect } from "react";
+import { memo, useEffect } from "react";
 import { useWatchlistContext } from "../contexts/WatchlistContext";
 import { useUIContext } from "../contexts/UIContext";
 import { useRecommendations } from "../hooks/useRecommendations";
 import { MediaGrid } from "../components/media/MediaGrid";
+import { MediaGridSkeleton } from "../components/common/MediaCardSkeleton";
 
 export const RecommendationsPage: React.FC = memo(() => {
     const { watchlist, watchlistIds } = useWatchlistContext();
@@ -46,9 +47,7 @@ export const RecommendationsPage: React.FC = memo(() => {
                 </button>
             </div>
             {isLoading ? (
-                <div className="text-center py-10">
-                    <p>Finding recommendations...</p>
-                </div>
+                <MediaGridSkeleton count={12} />
             ) : recommendations.length > 0 ? (
                 <MediaGrid
                     mediaItems={recommendations}

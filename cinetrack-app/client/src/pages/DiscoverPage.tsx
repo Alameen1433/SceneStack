@@ -1,9 +1,10 @@
-import React, { memo } from "react";
+import { memo } from "react";
 import { useDiscoverContext } from "../contexts/DiscoverContext";
 import { useWatchlistContext } from "../contexts/WatchlistContext";
 import { useUIContext } from "../contexts/UIContext";
 import { MediaSection } from "../components/common/MediaSection";
 import { Carousel } from "../components/media/Carousal";
+import { MediaGridSkeleton } from "../components/common/MediaCardSkeleton";
 
 export const DiscoverPage: React.FC = memo(() => {
     const { trending, popularMovies, popularTV, isLoading } = useDiscoverContext();
@@ -12,8 +13,20 @@ export const DiscoverPage: React.FC = memo(() => {
 
     if (isLoading) {
         return (
-            <div className="text-center py-10">
-                <p>Loading discover content...</p>
+            <div className="space-y-12">
+                {/* Hero skeleton */}
+                <div className="relative h-[50vh] min-h-[400px] max-h-[600px] rounded-2xl overflow-hidden bg-brand-surface">
+                    <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-brand-surface via-white/5 to-brand-surface bg-[length:200%_100%]" />
+                </div>
+                {/* Section skeletons */}
+                <div>
+                    <div className="h-7 w-48 mb-4 rounded bg-brand-surface animate-pulse" />
+                    <MediaGridSkeleton count={6} />
+                </div>
+                <div>
+                    <div className="h-7 w-40 mb-4 rounded bg-brand-surface animate-pulse" />
+                    <MediaGridSkeleton count={6} />
+                </div>
             </div>
         );
     }
