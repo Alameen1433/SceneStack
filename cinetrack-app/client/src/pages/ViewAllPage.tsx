@@ -4,7 +4,8 @@ import { useWatchlistIds, useProgressMap } from "../contexts/WatchlistContext";
 import { useUIContext } from "../contexts/UIContext";
 import type { Media } from "../types/types";
 
-const ITEMS_PER_PAGE = 24;
+const ITEMS_PER_PAGE_MOBILE = 20;
+const ITEMS_PER_PAGE_DESKTOP = 24;
 
 interface ViewAllPageProps {
     title: string;
@@ -21,13 +22,27 @@ export const ViewAllPage: React.FC<ViewAllPageProps> = ({
     const progressMap = useProgressMap();
     const { handleSelectMedia, selectedMediaId } = useUIContext();
     const [currentPage, setCurrentPage] = useState(1);
+    const [windowWidth, setWindowWidth] = useState(
+        typeof window !== "undefined" ? window.innerWidth : 1024
+    );
 
-    const totalPages = useMemo(() => Math.ceil(items.length / ITEMS_PER_PAGE), [items.length]);
+    // Track window width for responsive items per page
+    useEffect(() => {
+        const handleResize = () => setWindowWidth(window.innerWidth);
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    const itemsPerPage = useMemo(() =>
+        windowWidth >= 640 ? ITEMS_PER_PAGE_DESKTOP : ITEMS_PER_PAGE_MOBILE
+        , [windowWidth]);
+
+    const totalPages = useMemo(() => Math.ceil(items.length / itemsPerPage), [items.length, itemsPerPage]);
 
     const paginatedItems = useMemo(() => {
-        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-        return items.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-    }, [items, currentPage]);
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return items.slice(startIndex, startIndex + itemsPerPage);
+    }, [items, currentPage, itemsPerPage]);
 
     const handlePrevPage = useCallback(() => {
         setCurrentPage((prev) => Math.max(1, prev - 1));
