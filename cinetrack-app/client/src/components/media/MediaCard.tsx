@@ -1,5 +1,5 @@
-import React from "react";
-import { TMDB_IMAGE_BASE_URL } from "../../constants/constants";
+import React, { memo, useMemo } from "react";
+import { TMDB_IMAGE_BASE_URL, TMDB_IMAGE_BASE_URL_MOBILE } from "../../constants/constants";
 import type { Media } from "../../types/types";
 
 interface MediaCardProps {
@@ -29,7 +29,7 @@ const MediaPlaceholder: React.FC = () => (
   </div>
 );
 
-export const MediaCard: React.FC<MediaCardProps> = ({
+const MediaCardComponent: React.FC<MediaCardProps> = ({
   media,
   onClick,
   isInWatchlist,
@@ -38,6 +38,13 @@ export const MediaCard: React.FC<MediaCardProps> = ({
 }) => {
   const title = media.media_type === "movie" ? media.title : media.name;
   const isCurrentlyWatching = progress !== undefined && progress > 0;
+
+  const imageUrl = useMemo(() => {
+    if (!media.poster_path) return null;
+    const isMobile = window.innerWidth < 768;
+    const baseUrl = isMobile ? TMDB_IMAGE_BASE_URL_MOBILE : TMDB_IMAGE_BASE_URL;
+    return `${baseUrl}${media.poster_path}`;
+  }, [media.poster_path]);
 
   return (
     <div
@@ -48,12 +55,13 @@ export const MediaCard: React.FC<MediaCardProps> = ({
       style={{ opacity: isDimmed ? 0 : 1, transition: "opacity 0.3s" }}
     >
       <div className="relative rounded-lg overflow-hidden shadow-lg bg-brand-surface aspect-[2/3] ring-1 ring-white/5 group-hover:ring-brand-primary/30 transition-all">
-        {media.poster_path ? (
+        {imageUrl ? (
           <img
-            src={`${TMDB_IMAGE_BASE_URL}${media.poster_path}`}
+            src={imageUrl}
             alt={`Poster for ${title}`}
             className="w-full h-full object-cover"
             loading="lazy"
+            decoding="async"
           />
         ) : (
           <MediaPlaceholder />
@@ -118,3 +126,13 @@ export const MediaCard: React.FC<MediaCardProps> = ({
     </div>
   );
 };
+
+export const MediaCard = memo(MediaCardComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.media.id === nextProps.media.id &&
+    prevProps.isInWatchlist === nextProps.isInWatchlist &&
+    prevProps.progress === nextProps.progress &&
+    prevProps.isDimmed === nextProps.isDimmed
+  );
+});
+

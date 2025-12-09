@@ -1,4 +1,4 @@
-import React from "react";
+import { memo } from "react";
 import { MediaCard } from "./MediaCard";
 import type { Media } from "../../types/types";
 
@@ -10,7 +10,7 @@ interface MediaGridProps {
   selectedMediaId: string | null;
 }
 
-export const MediaGrid: React.FC<MediaGridProps> = ({
+export const MediaGrid = memo<MediaGridProps>(({
   mediaItems,
   onCardClick,
   watchlistIds,
@@ -31,4 +31,4 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
       ))}
     </div>
   );
-};
+});

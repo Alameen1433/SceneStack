@@ -7,9 +7,8 @@ export default defineConfig({
   envDir: './',
   server: {
     port: 5173,
-    host: true, // Expose to network (0.0.0.0)
+    host: true,
     proxy: {
-      // Proxy /api requests to the backend server
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
@@ -18,5 +17,13 @@ export default defineConfig({
   },
   build: {
     sourcemap: false,
-  }
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'scheduler'],
+          'db': ['idb'],
+        },
+      },
+    },
+  },
 })
