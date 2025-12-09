@@ -88,21 +88,52 @@ Set it on your router, device, or browser, and you're good to go. Welcome to the
 git clone https://github.com/Alameen1433/SceneStack.git
 cd SceneStack/cinetrack-app
 
-# Install dependencies
+# Install all dependencies (uses npm workspaces)
 npm install
-cd client && npm install && cd ..
-cd server && npm install && cd ..
 
 # Set up environment variables
 cp server/.env.example server/.env
-# Edit server/.env with your MongoDB URI, JWT secret, and TMDB API key
+# Edit server/.env with your MongoDB URI, JWT secret, etc.
 
 cp client/.env.example client/.env
 # Edit client/.env with your TMDB read access token
-
-# Run both frontend and backend
-npm run dev
 ```
+
+### Development Mode
+
+Run the client and server in **two separate terminals**:
+
+```bash
+# Terminal 1 - Start the backend server (port 3001)
+npm run dev:server
+
+# Terminal 2 - Start the frontend dev server (port 5173)
+npm run dev:client
+```
+
+### Deployment (Render, AWS, Railway, etc.)
+
+This project is configured to run as a **monolith** in production: the Express server serves both the API and the compiled React frontend.
+
+**General Application Settings:**
+- **Build Command:** `npm install && npm run build` (Installs deps & compiles React)
+- **Start Command:** `npm start` (Starts Express server)
+- **Root Directory:** `cinetrack-app`
+
+#### Example: Deploying to Render
+1. **Create a Web Service** and connect your GitHub repo
+2. **Use the General Settings** above
+3. **Add Environment Variables:**
+   - `MONGO_URI`, `JWT_SECRET`, `INVITE_CODES`
+   - `VITE_TMDB_API_READ_ACCESS_TOKEN`
+4. **Deploy**
+
+#### AWS / Other Platforms
+The procedure is virtually the same. Ensure your platform builds the client (`npm run build`) and starts the server (`npm start`).
+- **AWS Elastic Beanstalk:** Configure the build script to run `npm run build` before starting.
+- **Railway/Heroku:** Similar to Render, just set the build and start commands.
+
+> **How it works:** `npm run build` compiles the React app to `client/dist/`. The Express server serves these static files in production alongside the API routes.
 
 ### Environment Variables
 
