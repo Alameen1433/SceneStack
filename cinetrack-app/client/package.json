@@ -14,6 +14,7 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "scheduler": "^0.27.0",
+    "socket.io-client": "^4.8.1",
     "use-context-selector": "^2.0.0"
   },
   "devDependencies": {

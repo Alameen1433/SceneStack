@@ -3,10 +3,12 @@ import {
     useCallback,
     useEffect,
     useMemo,
+    useRef,
     type ReactNode,
 } from "react";
 import { createContext, useContextSelector } from "use-context-selector";
 import * as dbService from "../services/dbService";
+import { socketService } from "../services/socketService";
 import { getMovieDetails, getTVDetails } from "../services/tmdbService";
 import type {
     WatchlistItem,
@@ -64,18 +66,23 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
     const [error, setError] = useState<string | null>(null);
     const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
 
+    // Track pending local operations to avoid duplicate updates from socket
+    const pendingOpsRef = useRef<Set<number>>(new Set());
+
     const watchlistIds = useMemo(
         () => new Set(watchlist.map((item) => item.id)),
         [watchlist]
     );
 
-    // Load watchlist on mount
+    // Load watchlist and connect socket on mount
     useEffect(() => {
         const loadWatchlist = async () => {
             setIsLoading(true);
             try {
                 const items = await dbService.getAllWatchlistItems();
                 setWatchlist(items);
+                // Connect socket after successful load
+                socketService.connect();
             } catch (err) {
                 console.error("Failed to load watchlist from DB", err);
                 setError("Could not load your watchlist. Please try refreshing.");
@@ -84,6 +91,54 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
             }
         };
         loadWatchlist();
+
+        return () => {
+            socketService.disconnect();
+        };
+    }, []);
+
+    // Subscribe to socket events
+    useEffect(() => {
+        // Handle incoming updates from other devices
+        const unsubUpdate = socketService.onUpdate((item) => {
+            // Skip if this was our own operation
+            if (pendingOpsRef.current.has(item.id)) {
+                pendingOpsRef.current.delete(item.id);
+                return;
+            }
+            setWatchlist((prev) => {
+                const exists = prev.some((i) => i.id === item.id);
+                if (exists) {
+                    return prev.map((i) => (i.id === item.id ? item : i));
+                }
+                return [item, ...prev];
+            });
+        });
+
+        // Handle incoming deletes from other devices
+        const unsubDelete = socketService.onDelete(({ id }) => {
+            if (pendingOpsRef.current.has(id)) {
+                pendingOpsRef.current.delete(id);
+                return;
+            }
+            setWatchlist((prev) => prev.filter((i) => i.id !== id));
+        });
+
+        // Handle sync trigger (e.g., after import on another device)
+        const unsubSync = socketService.onSync(async () => {
+            try {
+                const items = await dbService.getAllWatchlistItems();
+                setWatchlist(items);
+            } catch (err) {
+                console.error("Failed to sync watchlist", err);
+            }
+        });
+
+        return () => {
+            unsubUpdate();
+            unsubDelete();
+            unsubSync();
+        };
     }, []);
 
     // Derived filtered lists
@@ -174,6 +229,7 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
     // Toggle watchlist from detail view
     const toggleWatchlist = useCallback(
         async (media: MovieDetail | TVDetail) => {
+            pendingOpsRef.current.add(media.id);
             if (watchlistIds.has(media.id)) {
                 await dbService.deleteWatchlistItem(media.id);
                 setWatchlist((prev) => prev.filter((item) => item.id !== media.id));
@@ -228,6 +284,7 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
 
         if (!itemToUpdate) return;
 
+        pendingOpsRef.current.add(movieId);
         const updatedItem = { ...itemToUpdate, watched: !itemToUpdate.watched };
 
         setWatchlist((prev) =>
@@ -253,6 +310,8 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
             ) as TVWatchlistItem | undefined;
 
             if (!itemToUpdate) return;
+
+            pendingOpsRef.current.add(tvId);
 
             const newWatchedEpisodes = { ...(itemToUpdate.watchedEpisodes || {}) };
             const seasonEpisodes = newWatchedEpisodes[seasonNumber]
@@ -302,6 +361,8 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
 
             if (!itemToUpdate) return;
 
+            pendingOpsRef.current.add(tvId);
+
             const newWatchedEpisodes = { ...(itemToUpdate.watchedEpisodes || {}) };
             const seasonEpisodes = newWatchedEpisodes[seasonNumber] || [];
 
@@ -337,6 +398,7 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
     const updateTags = useCallback(async (mediaId: number, newTags: string[]) => {
         const itemToUpdate = await dbService.getWatchlistItem(mediaId);
         if (itemToUpdate) {
+            pendingOpsRef.current.add(mediaId);
             const updatedItem = { ...itemToUpdate, tags: newTags };
             await dbService.putWatchlistItem(updatedItem);
             setWatchlist((prev) =>
