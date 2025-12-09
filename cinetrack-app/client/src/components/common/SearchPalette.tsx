@@ -71,7 +71,7 @@ export const SearchPalette: React.FC<SearchPaletteProps> = ({
             {/* Search Trigger Button */}
             <button
                 onClick={() => setIsOpen(true)}
-                className="w-full max-w-xl flex items-center gap-3 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl text-brand-text-dim transition-all duration-200 group"
+                className="w-full max-w-xl flex items-center gap-3 px-4 py-2.5 bg-brand-surface/50 hover:bg-brand-surface border border-white/5 hover:border-brand-primary/30 rounded-lg text-brand-text-dim transition-all duration-200 group"
             >
                 <svg
                     className="w-4 h-4 text-brand-text-dim group-hover:text-white transition-colors"
@@ -100,7 +100,7 @@ export const SearchPalette: React.FC<SearchPaletteProps> = ({
 
                     {/* Modal */}
                     <div
-                        className="relative w-full max-w-2xl mx-4 bg-brand-surface/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-fadeInUp"
+                        className="relative w-full max-w-2xl mx-4 bg-brand-surface/95 backdrop-blur-xl border border-brand-primary/10 rounded-xl shadow-2xl overflow-hidden animate-fadeInUp"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Search Input */}

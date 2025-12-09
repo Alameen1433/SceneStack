@@ -499,9 +499,9 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                 {/* Watchlist Toggle - Primary Action */}
                 <button
                   onClick={() => onToggleWatchlist(media)}
-                  className={`flex-1 min-w-[140px] py-3 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${isInWatchlist
-                      ? "bg-white/10 hover:bg-red-500/20 text-white hover:text-red-400 border border-white/20"
-                      : "bg-brand-primary hover:bg-brand-secondary text-white"
+                  className={`flex-1 min-w-[140px] py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${isInWatchlist
+                    ? "bg-white/10 hover:bg-red-500/20 text-white hover:text-red-400 border border-white/10"
+                    : "bg-brand-primary hover:bg-brand-secondary text-brand-bg shadow-lg shadow-brand-primary/20"
                     }`}
                 >
                   {isInWatchlist ? (
@@ -527,7 +527,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                     href={`https://www.youtube.com/watch?v=${trailer.key}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 min-w-[140px] py-3 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                    className="flex-1 min-w-[140px] py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 text-white border border-white/10"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M8 5v14l11-7z" />
@@ -540,9 +540,9 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                 {media.media_type === "movie" && isInWatchlist && watchlistItem?.media_type === "movie" && (
                   <button
                     onClick={() => onToggleMovieWatched(media.id)}
-                    className={`flex-1 min-w-[140px] py-3 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 border ${watchlistItem.watched
-                        ? "bg-brand-primary/20 border-brand-primary text-brand-primary"
-                        : "bg-white/10 hover:bg-white/20 text-white border-white/20"
+                    className={`flex-1 min-w-[140px] py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 border ${watchlistItem.watched
+                      ? "bg-brand-primary/20 border-brand-primary text-brand-primary"
+                      : "bg-white/10 hover:bg-white/15 text-white border-white/10"
                       }`}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">

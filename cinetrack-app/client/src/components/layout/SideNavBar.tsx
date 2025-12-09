@@ -21,8 +21,8 @@ const NavItem: React.FC<NavItemProps> = ({
     <button
       onClick={onClick}
       title={isCollapsed ? label : undefined}
-      className={`group flex items-center w-full px-3 py-2.5 my-0.5 rounded-xl transition-all duration-200 ${isActive
-        ? "bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-lg shadow-brand-primary/20"
+      className={`group flex items-center w-full px-3 py-2.5 my-0.5 rounded-lg transition-all duration-200 ${isActive
+        ? "bg-brand-primary/15 text-brand-primary border-l-2 border-brand-primary"
         : "text-brand-text-dim hover:bg-white/5 hover:text-white"
         }`}
       aria-current={isActive ? "page" : undefined}
@@ -108,8 +108,8 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
         {/* Header with logo and collapse toggle */}
         <div className="flex items-center justify-between p-4 border-b border-white/5">
           {!isCollapsed && (
-            <h1 className="text-lg font-black tracking-tighter text-white">
-              Scene<span className="text-brand-secondary">Stack</span>
+            <h1 className="font-display text-2xl tracking-wide text-white">
+              SCENE<span className="text-brand-primary">STACK</span>
             </h1>
           )}
           <button

@@ -47,8 +47,8 @@ const Header: React.FC = memo(() => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {/* Desktop Header */}
         <div className="hidden sm:flex w-full items-center justify-between">
-          <div className="lg:hidden text-3xl font-black tracking-tighter text-white">
-            Scene<span className="text-brand-secondary">Stack</span>
+          <div className="lg:hidden font-display text-3xl tracking-wide text-white">
+            SCENE<span className="text-brand-primary">STACK</span>
           </div>
           {/* Tablet - Regular SearchBar */}
           <div className="lg:hidden w-full max-w-sm flex items-center gap-2 ml-auto">
@@ -107,8 +107,8 @@ const Header: React.FC = memo(() => {
             </div>
           ) : (
             <>
-              <h1 className="text-3xl font-black tracking-tighter text-white">
-                Scene<span className="text-brand-secondary">Stack</span>
+              <h1 className="font-display text-3xl tracking-wide text-white">
+                SCENE<span className="text-brand-primary">STACK</span>
               </h1>
               <div className="flex items-center gap-1">
                 <button

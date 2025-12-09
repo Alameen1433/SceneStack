@@ -20,7 +20,7 @@ const PasswordInput: React.FC<{
                 onChange={(e) => onChange(e.target.value)}
                 required={required}
                 minLength={minLength}
-                className="w-full px-4 py-3 pr-12 bg-black/30 border border-white/10 rounded-xl text-white focus:outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/50 transition-all"
+                className="w-full px-4 py-3 pr-12 bg-black/40 border border-white/5 rounded-lg text-white placeholder:text-brand-text-muted focus:outline-none focus:border-brand-primary/50 focus:ring-1 focus:ring-brand-primary/30 transition-all"
             />
             <button
                 type="button"
@@ -77,30 +77,32 @@ export const AuthPage: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4 overflow-hidden">
-            {/* Animated Background */}
+            {/* Cinema Noir Background */}
             <div className="absolute inset-0 overflow-hidden">
-                <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-brand-primary/20 to-transparent rounded-full blur-3xl animate-pulse" />
-                <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-brand-secondary/20 to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_#1a1a1e_0%,_#0A0A0B_50%)]" />
+                <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand-primary/8 rounded-full blur-[120px]" />
+                <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-brand-secondary/6 rounded-full blur-[100px]" />
+                <div className="absolute inset-0 opacity-[0.015] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIzMDAiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
             </div>
 
             {/* Auth Card */}
             <div className="relative w-full max-w-md">
-                {/* Glassmorphism Card */}
-                <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-8 shadow-2xl">
+                {/* Cinema Card */}
+                <div className="backdrop-blur-md bg-brand-surface/80 border border-brand-primary/10 rounded-2xl p-8 shadow-2xl shadow-black/50">
                     {/* Logo */}
                     <div className="text-center mb-8">
-                        <h1 className="text-4xl font-black tracking-tighter text-white">
-                            Scene<span className="text-brand-secondary">Stack</span>
+                        <h1 className="font-display text-5xl tracking-wide text-white">
+                            SCENE<span className="text-brand-primary">STACK</span>
                         </h1>
-                        <p className="text-brand-text-dim mt-2">Track your watchlist</p>
+                        <p className="text-brand-text-dim mt-2 text-sm tracking-wider uppercase">Your Cinematic Journey</p>
                     </div>
 
                     {/* Mode Toggle */}
-                    <div className="flex bg-black/30 rounded-xl p-1 mb-6">
+                    <div className="flex bg-black/40 rounded-lg p-1 mb-6">
                         <button
                             onClick={() => { setMode("login"); clearError(); }}
-                            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${mode === "login"
-                                ? "bg-brand-primary text-white shadow-lg"
+                            className={`flex-1 py-2.5 rounded-md text-sm font-medium tracking-wide transition-all duration-300 ${mode === "login"
+                                ? "bg-brand-primary text-brand-bg shadow-lg shadow-brand-primary/20"
                                 : "text-brand-text-dim hover:text-white"
                                 }`}
                         >
@@ -108,8 +110,8 @@ export const AuthPage: React.FC = () => {
                         </button>
                         <button
                             onClick={() => { setMode("register"); clearError(); }}
-                            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${mode === "register"
-                                ? "bg-brand-primary text-white shadow-lg"
+                            className={`flex-1 py-2.5 rounded-md text-sm font-medium tracking-wide transition-all duration-300 ${mode === "register"
+                                ? "bg-brand-primary text-brand-bg shadow-lg shadow-brand-primary/20"
                                 : "text-brand-text-dim hover:text-white"
                                 }`}
                         >
@@ -139,7 +141,7 @@ export const AuthPage: React.FC = () => {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
-                                className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/50 transition-all"
+                                className="w-full px-4 py-3 bg-black/40 border border-white/5 rounded-lg text-white placeholder:text-brand-text-muted focus:outline-none focus:border-brand-primary/50 focus:ring-1 focus:ring-brand-primary/30 transition-all"
                             />
                         </div>
 
@@ -167,7 +169,7 @@ export const AuthPage: React.FC = () => {
                                     value={inviteCode}
                                     onChange={(e) => setInviteCode(e.target.value)}
                                     required={mode === "register"}
-                                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/50 transition-all"
+                                    className="w-full px-4 py-3 bg-black/40 border border-white/5 rounded-lg text-white placeholder:text-brand-text-muted focus:outline-none focus:border-brand-primary/50 focus:ring-1 focus:ring-brand-primary/30 transition-all"
                                 />
                             </div>
                         )}
@@ -175,7 +177,7 @@ export const AuthPage: React.FC = () => {
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className="w-full py-3 mt-4 bg-gradient-to-r from-brand-primary to-brand-secondary text-white font-bold rounded-xl shadow-lg hover:shadow-brand-primary/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                            className="w-full py-3.5 mt-6 bg-brand-primary text-brand-bg font-semibold rounded-lg shadow-lg shadow-brand-primary/25 hover:bg-brand-secondary hover:shadow-brand-secondary/30 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         >
                             {isSubmitting ? (
                                 <span className="flex items-center justify-center gap-2">
@@ -198,14 +200,14 @@ export const AuthPage: React.FC = () => {
                         {mode === "login" ? (
                             <>
                                 Don't have an account?{" "}
-                                <button onClick={toggleMode} className="text-brand-secondary hover:underline font-semibold">
+                                <button onClick={toggleMode} className="text-brand-primary hover:text-brand-secondary transition-colors font-medium">
                                     Sign up
                                 </button>
                             </>
                         ) : (
                             <>
                                 Already have an account?{" "}
-                                <button onClick={toggleMode} className="text-brand-secondary hover:underline font-semibold">
+                                <button onClick={toggleMode} className="text-brand-primary hover:text-brand-secondary transition-colors font-medium">
                                     Sign in
                                 </button>
                             </>
@@ -213,8 +215,8 @@ export const AuthPage: React.FC = () => {
                     </p>
                 </div>
 
-                {/* Decorative Elements */}
-                <div className="absolute -z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-br from-brand-primary/10 via-transparent to-brand-secondary/10 rounded-full blur-3xl" />
+                {/* Decorative Border Glow */}
+                <div className="absolute -z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[102%] h-[102%] bg-gradient-to-b from-brand-primary/20 via-transparent to-transparent rounded-2xl blur-sm" />
             </div>
 
             {/* CSS Animations */}

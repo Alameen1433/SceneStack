@@ -47,7 +47,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
       aria-label={`View details for ${title}`}
       style={{ opacity: isDimmed ? 0 : 1, transition: "opacity 0.3s" }}
     >
-      <div className="relative rounded-xl overflow-hidden shadow-lg bg-brand-surface aspect-[2/3]">
+      <div className="relative rounded-lg overflow-hidden shadow-lg bg-brand-surface aspect-[2/3] ring-1 ring-white/5 group-hover:ring-brand-primary/30 transition-all">
         {media.poster_path ? (
           <img
             src={`${TMDB_IMAGE_BASE_URL}${media.poster_path}`}
@@ -72,7 +72,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
         )}
 
         {isInWatchlist && (
-          <div className="absolute top-2 right-2 bg-brand-primary/80 backdrop-blur-sm text-white rounded-full p-1.5 shadow-md">
+          <div className="absolute top-2 right-2 bg-brand-primary/90 backdrop-blur-sm text-brand-bg rounded-full p-1.5 shadow-md">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-4 w-4"
@@ -90,7 +90,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
 
         {isCurrentlyWatching && (
           <div
-            className="absolute top-2 left-2 bg-brand-secondary/80 backdrop-blur-sm text-white rounded-full p-1.5 shadow-md"
+            className="absolute top-2 left-2 bg-brand-surface/90 backdrop-blur-sm text-brand-primary rounded-full p-1.5 shadow-md"
             title="Update progress"
           >
             <svg

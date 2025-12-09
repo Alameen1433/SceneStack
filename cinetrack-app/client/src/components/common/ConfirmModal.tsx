@@ -49,7 +49,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             onClick={onCancel}
         >
             <div
-                className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-2xl w-full max-w-sm p-6 text-white animate-scale-in"
+                className="backdrop-blur-xl bg-brand-surface/90 border border-brand-primary/10 rounded-xl shadow-2xl w-full max-w-sm p-6 text-white animate-scale-in"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Icon */}
@@ -78,15 +78,15 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 <div className="flex gap-3">
                     <button
                         onClick={onCancel}
-                        className="flex-1 py-2.5 px-4 rounded-xl font-medium transition-all bg-white/10 hover:bg-white/20 text-white border border-white/10"
+                        className="flex-1 py-2.5 px-4 rounded-lg font-medium transition-all bg-white/10 hover:bg-white/15 text-white border border-white/5"
                     >
                         {cancelText}
                     </button>
                     <button
                         onClick={onConfirm}
-                        className={`flex-1 py-2.5 px-4 rounded-xl font-medium transition-all ${confirmStyle === "danger"
-                                ? "bg-red-500 hover:bg-red-600 text-white"
-                                : "bg-brand-primary hover:bg-brand-secondary text-white"
+                        className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-all ${confirmStyle === "danger"
+                            ? "bg-red-500 hover:bg-red-600 text-white"
+                            : "bg-brand-primary hover:bg-brand-secondary text-brand-bg shadow-md shadow-brand-primary/20"
                             }`}
                     >
                         {confirmText}
