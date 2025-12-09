@@ -145,6 +145,7 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     // Select media and open detail modal
     const handleSelectMedia = useCallback(
         async (media: Media, rect: DOMRect) => {
+            // Prevent opening if already animating
             if (animatingMedia) return;
 
             window.history.pushState(
@@ -166,9 +167,11 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
                     details = await getTVDetails(media.id);
                 }
                 setDetailedMedia(details);
+                setAnimatingMedia(null);
             } catch (err) {
                 setError("Failed to fetch media details.");
                 console.error(err);
+                setAnimatingMedia(null); 
                 window.history.back();
             }
         },
@@ -176,6 +179,10 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     );
 
     const handleCloseModal = useCallback(() => {
+        // Clear states immediately to prevent stuck state
+        setAnimatingMedia(null);
+        setSelectedMediaId(null);
+        setDetailedMedia(null);
         window.history.back();
     }, []);
 
