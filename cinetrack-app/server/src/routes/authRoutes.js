@@ -1,19 +1,13 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const config = require("../config");
 const { JWT_SECRET, authMiddleware } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const INVITE_CODES = (process.env.INVITE_CODES || "")
-    .split(",")
-    .map(c => c.trim())
-    .filter(Boolean);
-
-if (INVITE_CODES.length === 0) {
-    console.warn("WARNING: No invite codes configured. Registration will fail.");
-}
+const INVITE_CODES = config.inviteCodes;
 
 module.exports = (usersCollection) => {
     // POST /api/auth/register

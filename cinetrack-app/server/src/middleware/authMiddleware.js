@@ -1,10 +1,7 @@
 const jwt = require("jsonwebtoken");
+const config = require("../config");
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-    console.error("FATAL: JWT_SECRET environment variable is not set.");
-    process.exit(1);
-}
+const JWT_SECRET = config.jwt.secret;
 
 const authMiddleware = (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -25,3 +22,4 @@ const authMiddleware = (req, res, next) => {
 };
 
 module.exports = { authMiddleware, JWT_SECRET };
+
