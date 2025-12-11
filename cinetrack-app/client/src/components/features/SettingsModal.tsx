@@ -1,6 +1,19 @@
 import React, { useRef, useState, useEffect } from "react";
 import { useAuthContext, getAuthToken } from "../../contexts/AuthContext";
 import { ConfirmModal } from "../common/ConfirmModal";
+import {
+  FiEye,
+  FiEyeOff,
+  FiHardDrive,
+  FiLoader,
+  FiKey,
+  FiCheckCircle,
+  FiAlertCircle,
+  FiLogOut,
+  FiDownload,
+  FiUpload,
+  FiX
+} from "react-icons/fi";
 
 // API requests use relative URLs - Vite proxy handles forwarding in dev
 const API_BASE_URL = '';
@@ -12,7 +25,6 @@ interface SettingsModalProps {
   onImport: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-// Password input with show/hide toggle
 const PasswordInput: React.FC<{
   value: string;
   onChange: (value: string) => void;
@@ -38,14 +50,9 @@ const PasswordInput: React.FC<{
         aria-label={showPassword ? "Hide password" : "Show password"}
       >
         {showPassword ? (
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-          </svg>
+          <FiEyeOff className="h-5 w-5" />
         ) : (
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-          </svg>
+          <FiEye className="h-5 w-5" />
         )}
       </button>
     </div>
@@ -93,17 +100,12 @@ const StorageStats: React.FC = () => {
   return (
     <section className="pt-4 border-t border-white/10">
       <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-brand-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
-        </svg>
+        <FiHardDrive className="h-4 w-4 text-brand-primary" />
         Storage Info
       </h3>
       {isLoading ? (
         <div className="flex items-center justify-center py-4">
-          <svg className="animate-spin h-5 w-5 text-brand-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
+          <FiLoader className="animate-spin h-5 w-5 text-brand-primary" />
         </div>
       ) : error ? (
         <p className="text-sm text-red-400">{error}</p>
@@ -249,7 +251,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             className="text-brand-text-dim hover:text-white transition-colors text-2xl leading-none p-1 hover:bg-white/10 rounded-lg"
             aria-label="Close settings"
           >
-            ✕
+            <FiX />
           </button>
         </div>
 
@@ -276,9 +278,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   onClick={() => { setShowPasswordForm(true); setPasswordSuccess(false); }}
                   className="w-full mt-4 py-2 px-4 rounded-lg font-medium transition-colors bg-white/10 hover:bg-white/20 text-white flex items-center justify-center gap-2"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                  </svg>
+                  <FiKey className="h-4 w-4" />
                   Change Password
                 </button>
               ) : (
@@ -286,17 +286,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   {/* Status Messages */}
                   {passwordError && (
                     <div className="flex items-start gap-2 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+                      <FiAlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
                       <p className="text-red-400 text-sm">{passwordError}</p>
                     </div>
                   )}
                   {passwordSuccess && (
                     <div className="flex items-start gap-2 p-3 bg-green-500/20 border border-green-500/30 rounded-lg">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+                      <FiCheckCircle className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
                       <div>
                         <p className="text-green-400 text-sm font-medium">Password updated successfully!</p>
                         <p className="text-green-400/70 text-xs mt-1">Your new password is now active. Use it the next time you log in.</p>
@@ -347,10 +343,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         >
                           {isChangingPassword ? (
                             <>
-                              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                              </svg>
+                              <FiLoader className="animate-spin h-4 w-4" />
                               Updating...
                             </>
                           ) : (
@@ -378,9 +371,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 onClick={handleLogout}
                 className="w-full mt-3 py-2 px-4 rounded-lg font-semibold transition-colors bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300 flex items-center justify-center gap-2"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
+                <FiLogOut className="h-5 w-5" />
                 Sign Out
               </button>
             </div>
@@ -399,18 +390,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 onClick={onExport}
                 className="flex-1 py-2.5 px-4 rounded-xl font-semibold transition-all bg-brand-primary hover:bg-brand-secondary text-white flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
+                <FiDownload className="h-5 w-5" />
                 Export
               </button>
               <button
                 onClick={handleImportClick}
                 className="flex-1 py-2.5 px-4 rounded-xl font-semibold transition-all bg-white/10 hover:bg-white/20 text-white flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                </svg>
+                <FiUpload className="h-5 w-5" />
                 Import
               </button>
               <input

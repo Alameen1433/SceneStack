@@ -1,6 +1,6 @@
-import { memo } from "react";
+import { useMemo, memo } from "react";
 import { useDiscoverContext } from "../contexts/DiscoverContext";
-import { useWatchlistContext } from "../contexts/WatchlistContext";
+import { useWatchlistStore, getWatchlistIds } from "../store/useWatchlistStore";
 import { useUIContext } from "../contexts/UIContext";
 import { MediaSection } from "../components/common/MediaSection";
 import { Carousel } from "../components/media/Carousal";
@@ -8,7 +8,9 @@ import { MediaGridSkeleton } from "../components/common/MediaCardSkeleton";
 
 export const DiscoverPage: React.FC = memo(() => {
     const { trending, popularMovies, popularTV, isLoading } = useDiscoverContext();
-    const { watchlistIds, toggleWatchlistFromSearchResult } = useWatchlistContext();
+    const watchlist = useWatchlistStore(state => state.watchlist);
+    const watchlistIds = useMemo(() => getWatchlistIds(watchlist), [watchlist]);
+    const toggleWatchlistFromSearchResult = useWatchlistStore(state => state.toggleWatchlistFromSearchResult);
     const { handleSelectMedia, selectedMediaId } = useUIContext();
 
     if (isLoading) {

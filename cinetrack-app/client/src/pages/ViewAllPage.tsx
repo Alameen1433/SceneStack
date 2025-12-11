@@ -3,6 +3,7 @@ import { MediaCard } from "../components/media/MediaCard";
 import { useWatchlistIds, useProgressMap } from "../contexts/WatchlistContext";
 import { useUIContext } from "../contexts/UIContext";
 import type { Media } from "../types/types";
+import { FiArrowLeft, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
 const ITEMS_PER_PAGE_MOBILE = 20;
 const ITEMS_PER_PAGE_DESKTOP = 24;
@@ -80,20 +81,7 @@ export const ViewAllPage: React.FC<ViewAllPageProps> = ({
                             className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
                             aria-label="Go back"
                         >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-6 w-6 text-brand-text-light"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth={2}
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                                />
-                            </svg>
+                            <FiArrowLeft className="h-6 w-6 text-brand-text-light" />
                         </button>
                         <div>
                             <h1 className="text-xl sm:text-2xl font-bold text-brand-text-light">
@@ -114,16 +102,7 @@ export const ViewAllPage: React.FC<ViewAllPageProps> = ({
                                 className="p-2 rounded-full hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                                 aria-label="Previous page"
                             >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-5 w-5 text-brand-text-light"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    strokeWidth={2}
-                                >
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                                </svg>
+                                <FiChevronLeft className="h-5 w-5 text-brand-text-light" />
                             </button>
                             <span className="text-brand-text-light font-medium min-w-[80px] text-center">
                                 Page {currentPage} of {totalPages}
@@ -134,16 +113,7 @@ export const ViewAllPage: React.FC<ViewAllPageProps> = ({
                                 className="p-2 rounded-full hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                                 aria-label="Next page"
                             >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-5 w-5 text-brand-text-light"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    strokeWidth={2}
-                                >
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                                </svg>
+                                <FiChevronRight className="h-5 w-5 text-brand-text-light" />
                             </button>
                         </div>
                     )}
@@ -176,16 +146,7 @@ export const ViewAllPage: React.FC<ViewAllPageProps> = ({
                         disabled={currentPage === 1}
                         className="flex items-center gap-2 px-4 py-2 rounded-full bg-brand-surface hover:bg-brand-primary/50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-5 w-5 text-brand-text-light"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                        >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                        </svg>
+                        <FiChevronLeft className="h-5 w-5 text-brand-text-light" />
                         <span className="text-brand-text-light font-medium">Prev</span>
                     </button>
                     <span className="text-brand-text-light font-medium min-w-[80px] text-center">
@@ -197,16 +158,7 @@ export const ViewAllPage: React.FC<ViewAllPageProps> = ({
                         className="flex items-center gap-2 px-4 py-2 rounded-full bg-brand-surface hover:bg-brand-primary/50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                         <span className="text-brand-text-light font-medium">Next</span>
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-5 w-5 text-brand-text-light"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                        >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                        </svg>
+                        <FiChevronRight className="h-5 w-5 text-brand-text-light" />
                     </button>
                 </footer>
             )}

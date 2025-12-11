@@ -10,7 +10,8 @@ import type {
   WatchProviderCountry,
 } from "../../types/types";
 import { EpisodeTracker } from "../features/EpisodeTracker";
-import { getWatchProviders } from "../../services/tmdbService";
+import { getWatchProviders, getBestLogo, getBestTrailer, combineRentBuyProviders } from "../../services/tmdbService";
+import { FiImage, FiArrowLeft, FiExternalLink, FiPlus, FiCheck, FiPlay, FiCheckCircle } from "react-icons/fi";
 
 interface MediaDetailModalProps {
   media: MovieDetail | TVDetail;
@@ -51,20 +52,7 @@ const DetailSection: React.FC<{ title: string; children: React.ReactNode }> = ({
 
 const PosterPlaceholder: React.FC = () => (
   <div className="aspect-[2/3] w-full bg-brand-surface flex items-center justify-center rounded-lg">
-    <svg
-      className="w-12 h-12 text-brand-text-dim"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        d="M15 10l4.55a2.5 2.5 0 010 4.09L15 18M3 8a2 2 0 012-2h5.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V18a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"
-      ></path>
-    </svg>
+    <FiImage className="w-12 h-12 text-brand-text-dim" />
   </div>
 );
 
@@ -180,25 +168,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
   const [isLoadingProviders, setIsLoadingProviders] = useState(true);
 
   const logo = useMemo(() => {
-    const logos = media.images?.logos;
-    if (!logos || logos.length === 0) return null;
-
-    // Prioritize English SVG
-    let bestLogo = logos.find(
-      (l) => l.iso_639_1 === "en" && l.file_path.endsWith(".svg")
-    );
-    if (bestLogo) return bestLogo;
-
-    // Any SVG
-    bestLogo = logos.find((l) => l.file_path.endsWith(".svg"));
-    if (bestLogo) return bestLogo;
-
-    // English PNG
-    bestLogo = logos.find((l) => l.iso_639_1 === "en");
-    if (bestLogo) return bestLogo;
-
-    // First available logo
-    return logos[0];
+    return getBestLogo(media.images?.logos);
   }, [media.images]);
 
   const logoUrl = logo
@@ -206,23 +176,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
     : "";
 
   const rentOrBuyProviders = useMemo(() => {
-    if (!providers) return [];
-
-    const combined = new Map<number, WatchProvider>();
-
-    (providers.rent || []).forEach((p) => {
-      if (!combined.has(p.provider_id)) {
-        combined.set(p.provider_id, p);
-      }
-    });
-
-    (providers.buy || []).forEach((p) => {
-      if (!combined.has(p.provider_id)) {
-        combined.set(p.provider_id, p);
-      }
-    });
-
-    return Array.from(combined.values());
+    return combineRentBuyProviders(providers);
   }, [providers]);
 
   useEffect(() => {
@@ -231,7 +185,6 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
       setProviders(null);
       try {
         const response = await getWatchProviders(media.id, media.media_type);
-        // We'll focus on US providers for this app.
         if (response.results.US) {
           setProviders(response.results.US);
         }
@@ -255,28 +208,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
   }, []);
 
   const trailer = useMemo(() => {
-    const videos = media.videos?.results;
-    if (!videos) return null;
-
-    const youtubeVideos = videos.filter((v) => v.site === "YouTube");
-
-    const officialTrailer = youtubeVideos.find(
-      (v) => v.type === "Trailer" && v.official
-    );
-    if (officialTrailer) return officialTrailer;
-
-    const anyTrailer = youtubeVideos.find((v) => v.type === "Trailer");
-    if (anyTrailer) return anyTrailer;
-
-    const officialTeaser = youtubeVideos.find(
-      (v) => v.type === "Teaser" && v.official
-    );
-    if (officialTeaser) return officialTeaser;
-
-    const anyTeaser = youtubeVideos.find((v) => v.type === "Teaser");
-    if (anyTeaser) return anyTeaser;
-
-    return null;
+    return getBestTrailer(media.videos);
   }, [media.videos]);
 
   const releaseYears = () => {
@@ -318,20 +250,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
             aria-label="Go back"
             className="p-2 rounded-full hover:bg-white/10 transition-colors"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
+            <FiArrowLeft className="h-6 w-6" />
           </button>
           <a
             href={`https://www.themoviedb.org/${media.media_type}/${media.id}`}
@@ -341,20 +260,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
             title="View on TMDB"
             className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light hover:bg-white/10 transition-colors"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-              />
-            </svg>
+            <FiExternalLink className="h-6 w-6" />
           </a>
         </header>
 
@@ -506,16 +412,12 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                 >
                   {isInWatchlist ? (
                     <>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
+                      <FiCheck className="h-5 w-5" />
                       <span className="hidden sm:inline">Remove</span>
                     </>
                   ) : (
                     <>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                      </svg>
+                      <FiPlus className="h-5 w-5" />
                       <span>Add to List</span>
                     </>
                   )}
@@ -529,9 +431,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                     rel="noopener noreferrer"
                     className="flex-1 min-w-[140px] py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 text-white border border-white/10"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
+                    <FiPlay className="h-5 w-5" />
                     <span>Trailer</span>
                   </a>
                 )}
@@ -545,9 +445,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                       : "bg-white/10 hover:bg-white/15 text-white border-white/10"
                       }`}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
+                    <FiCheckCircle className="h-5 w-5" />
                     <span>{watchlistItem.watched ? "Watched" : "Mark Watched"}</span>
                   </button>
                 )}

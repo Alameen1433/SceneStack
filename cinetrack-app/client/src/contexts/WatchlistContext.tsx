@@ -1,23 +1,24 @@
 import {
-    useState,
-    useCallback,
     useEffect,
     useMemo,
-    useRef,
     type ReactNode,
 } from "react";
 import { createContext, useContextSelector } from "use-context-selector";
-import * as dbService from "../services/dbService";
 import { socketService } from "../services/socketService";
-import { getMovieDetails, getTVDetails } from "../services/tmdbService";
 import type {
     WatchlistItem,
     MovieDetail,
     TVDetail,
     SearchResult,
-    MovieWatchlistItem,
     TVWatchlistItem,
 } from "../types/types";
+
+import {
+    useWatchlistStore,
+    getWatchlistIds,
+    getProgressMap,
+    getFilteredItems,
+} from "../store/useWatchlistStore";
 
 interface WatchlistContextType {
     watchlist: WatchlistItem[];
@@ -61,87 +62,30 @@ const WatchlistContext = createContext<WatchlistContextType | undefined>(
 export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
     children,
 }) => {
-    const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
+    const watchlist = useWatchlistStore(state => state.watchlist);
+    const activeTagFilter = useWatchlistStore(state => state.activeTagFilter);
+    const isLoading = useWatchlistStore(state => state.isLoading);
+    const error = useWatchlistStore(state => state.error);
+    const setError = useWatchlistStore(state => state.setError);
+    const setActiveTagFilter = useWatchlistStore(state => state.setActiveTagFilter);
+    const loadWatchlist = useWatchlistStore(state => state.loadWatchlist);
+    const toggleWatchlist = useWatchlistStore(state => state.toggleWatchlist);
+    const toggleWatchlistFromSearchResult = useWatchlistStore(state => state.toggleWatchlistFromSearchResult);
+    const toggleMovieWatched = useWatchlistStore(state => state.toggleMovieWatched);
+    const toggleEpisodeWatched = useWatchlistStore(state => state.toggleEpisodeWatched);
+    const toggleSeasonWatched = useWatchlistStore(state => state.toggleSeasonWatched);
+    const updateTags = useWatchlistStore(state => state.updateTags);
+    const exportWatchlist = useWatchlistStore(state => state.exportWatchlist);
+    const storeImportWatchlist = useWatchlistStore(state => state.importWatchlist);
+    const syncItem = useWatchlistStore(state => state.syncItem);
+    const deleteItem = useWatchlistStore(state => state.deleteItem);
 
-    // Track pending local operations to avoid duplicate updates from socket
-    const pendingOpsRef = useRef<Set<number>>(new Set());
-
+    // Derived state locally memoized to ensure stability and prevent loops
     const watchlistIds = useMemo(
         () => new Set(watchlist.map((item) => item.id)),
         [watchlist]
     );
 
-    // Load watchlist and connect socket on mount
-    useEffect(() => {
-        const loadWatchlist = async () => {
-            setIsLoading(true);
-            try {
-                const items = await dbService.getAllWatchlistItems();
-                setWatchlist(items);
-                // Connect socket after successful load
-                socketService.connect();
-            } catch (err) {
-                console.error("Failed to load watchlist from DB", err);
-                setError("Could not load your watchlist. Please try refreshing.");
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        loadWatchlist();
-
-        return () => {
-            socketService.disconnect();
-        };
-    }, []);
-
-    // Subscribe to socket events
-    useEffect(() => {
-        // Handle incoming updates from other devices
-        const unsubUpdate = socketService.onUpdate((item) => {
-            // Skip if this was our own operation
-            if (pendingOpsRef.current.has(item.id)) {
-                pendingOpsRef.current.delete(item.id);
-                return;
-            }
-            setWatchlist((prev) => {
-                const exists = prev.some((i) => i.id === item.id);
-                if (exists) {
-                    return prev.map((i) => (i.id === item.id ? item : i));
-                }
-                return [item, ...prev];
-            });
-        });
-
-        // Handle incoming deletes from other devices
-        const unsubDelete = socketService.onDelete(({ id }) => {
-            if (pendingOpsRef.current.has(id)) {
-                pendingOpsRef.current.delete(id);
-                return;
-            }
-            setWatchlist((prev) => prev.filter((i) => i.id !== id));
-        });
-
-        // Handle sync trigger (e.g., after import on another device)
-        const unsubSync = socketService.onSync(async () => {
-            try {
-                const items = await dbService.getAllWatchlistItems();
-                setWatchlist(items);
-            } catch (err) {
-                console.error("Failed to sync watchlist", err);
-            }
-        });
-
-        return () => {
-            unsubUpdate();
-            unsubDelete();
-            unsubSync();
-        };
-    }, []);
-
-    // Derived filtered lists
     const { watchlistItems, currentlyWatchingItems, watchedItems } =
         useMemo(() => {
             let filteredWatchlist = watchlist;
@@ -187,7 +131,7 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
             return { watchlistItems, currentlyWatchingItems, watchedItems };
         }, [watchlist, activeTagFilter]);
 
-    // Progress map for currently watching items
+    // Progress map
     const progressMap = useMemo(() => {
         const map: Record<string, number> = {};
         currentlyWatchingItems.forEach((item) => {
@@ -213,274 +157,47 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
         return Array.from(tags).sort();
     }, [watchlist]);
 
-    // Strip large data that's not needed for watchlist storage
-    const stripMediaForStorage = (media: MovieDetail | TVDetail): Partial<MovieDetail | TVDetail> => {
-        const copy = { ...media } as Record<string, unknown>;
-        delete copy.images;
-        delete copy.videos;
-        delete copy.credits;
-        delete copy.keywords;
-        delete copy.recommendations;
-        delete copy.similar;
-        delete copy.reviews;
-        return copy as Partial<MovieDetail | TVDetail>;
+    // Initial load and socket connection
+    useEffect(() => {
+        loadWatchlist();
+
+        return () => {
+            socketService.disconnect();
+        };
+    }, [loadWatchlist]);
+
+    // Socket listeners
+    useEffect(() => {
+        const unsubUpdate = socketService.onUpdate((item) => {
+            syncItem(item);
+        });
+
+        const unsubDelete = socketService.onDelete(({ id }) => {
+            deleteItem(id);
+        });
+
+        const unsubSync = socketService.onSync(async () => {
+            // Re-load full list on sync request
+            loadWatchlist();
+        });
+
+        return () => {
+            unsubUpdate();
+            unsubDelete();
+            unsubSync();
+        };
+    }, [syncItem, deleteItem, loadWatchlist]);
+
+    // Adapter for importWatchlist to match Context signature
+    const handleImportWatchlist = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            if (window.confirm("Are you sure you want to overwrite your current watchlist? This action cannot be undone.")) {
+                storeImportWatchlist(file);
+            }
+        }
+        event.target.value = "";
     };
-
-    // Toggle watchlist from detail view
-    const toggleWatchlist = useCallback(
-        async (media: MovieDetail | TVDetail) => {
-            pendingOpsRef.current.add(media.id);
-            if (watchlistIds.has(media.id)) {
-                await dbService.deleteWatchlistItem(media.id);
-                setWatchlist((prev) => prev.filter((item) => item.id !== media.id));
-            } else {
-                const strippedMedia = stripMediaForStorage(media);
-                let newItem: WatchlistItem;
-                if (media.media_type === "movie") {
-                    newItem = { ...strippedMedia, watched: false, tags: [] } as WatchlistItem;
-                } else {
-                    newItem = { ...strippedMedia, watchedEpisodes: {}, tags: [] } as WatchlistItem;
-                }
-                await dbService.putWatchlistItem(newItem);
-                setWatchlist((prev) => [...prev, newItem]);
-            }
-        },
-        [watchlistIds]
-    );
-
-    // Toggle watchlist from search result (needs to fetch details first)
-    const toggleWatchlistFromSearchResult = useCallback(
-        async (media: SearchResult) => {
-            if (watchlistIds.has(media.id)) {
-                try {
-                    await dbService.deleteWatchlistItem(media.id);
-                    setWatchlist((prev) => prev.filter((item) => item.id !== media.id));
-                } catch (err) {
-                    setError("Failed to remove item from watchlist.");
-                    console.error(err);
-                }
-            } else {
-                setError(null);
-                try {
-                    const details =
-                        media.media_type === "movie"
-                            ? await getMovieDetails(media.id)
-                            : await getTVDetails(media.id);
-                    await toggleWatchlist(details);
-                } catch (err) {
-                    setError("Failed to add item to watchlist.");
-                    console.error(err);
-                }
-            }
-        },
-        [watchlistIds, toggleWatchlist]
-    );
-
-    // Toggle movie watched status
-    const toggleMovieWatched = useCallback(async (movieId: number) => {
-        const itemToUpdate = watchlist.find(
-            (item) => item.id === movieId && item.media_type === "movie"
-        ) as MovieWatchlistItem | undefined;
-
-        if (!itemToUpdate) return;
-
-        pendingOpsRef.current.add(movieId);
-        const updatedItem = { ...itemToUpdate, watched: !itemToUpdate.watched };
-
-        setWatchlist((prev) =>
-            prev.map((item) => (item.id === movieId ? updatedItem : item))
-        );
-
-        try {
-            await dbService.putWatchlistItem(updatedItem);
-        } catch (err) {
-            setWatchlist((prev) =>
-                prev.map((item) => (item.id === movieId ? itemToUpdate : item))
-            );
-            setError("Failed to save progress. Please try again.");
-            console.error(err);
-        }
-    }, [watchlist]);
-
-    // Toggle episode watched status
-    const toggleEpisodeWatched = useCallback(
-        async (tvId: number, seasonNumber: number, episodeNumber: number) => {
-            const itemToUpdate = watchlist.find(
-                (item) => item.id === tvId && item.media_type === "tv"
-            ) as TVWatchlistItem | undefined;
-
-            if (!itemToUpdate) return;
-
-            pendingOpsRef.current.add(tvId);
-
-            const newWatchedEpisodes = { ...(itemToUpdate.watchedEpisodes || {}) };
-            const seasonEpisodes = newWatchedEpisodes[seasonNumber]
-                ? [...newWatchedEpisodes[seasonNumber]]
-                : [];
-            const episodeIndex = seasonEpisodes.indexOf(episodeNumber);
-
-            if (episodeIndex > -1) {
-                seasonEpisodes.splice(episodeIndex, 1);
-            } else {
-                seasonEpisodes.push(episodeNumber);
-            }
-            newWatchedEpisodes[seasonNumber] = seasonEpisodes;
-
-            const updatedItem = {
-                ...itemToUpdate,
-                watchedEpisodes: newWatchedEpisodes,
-            };
-
-            setWatchlist((prev) =>
-                prev.map((item) => (item.id === tvId ? updatedItem : item))
-            );
-
-            try {
-                await dbService.putWatchlistItem(updatedItem);
-            } catch (err) {
-                setWatchlist((prev) =>
-                    prev.map((item) => (item.id === tvId ? itemToUpdate : item))
-                );
-                setError("Failed to save progress. Please try again.");
-                console.error(err);
-            }
-        },
-        [watchlist]
-    );
-
-    // Toggle entire season watched
-    const toggleSeasonWatched = useCallback(
-        async (
-            tvId: number,
-            seasonNumber: number,
-            allEpisodeNumbers: number[]
-        ) => {
-            const itemToUpdate = watchlist.find(
-                (item) => item.id === tvId && item.media_type === "tv"
-            ) as TVWatchlistItem | undefined;
-
-            if (!itemToUpdate) return;
-
-            pendingOpsRef.current.add(tvId);
-
-            const newWatchedEpisodes = { ...(itemToUpdate.watchedEpisodes || {}) };
-            const seasonEpisodes = newWatchedEpisodes[seasonNumber] || [];
-
-            if (seasonEpisodes.length === allEpisodeNumbers.length) {
-                newWatchedEpisodes[seasonNumber] = [];
-            } else {
-                newWatchedEpisodes[seasonNumber] = allEpisodeNumbers;
-            }
-
-            const updatedItem = {
-                ...itemToUpdate,
-                watchedEpisodes: newWatchedEpisodes,
-            };
-
-            setWatchlist((prev) =>
-                prev.map((item) => (item.id === tvId ? updatedItem : item))
-            );
-
-            try {
-                await dbService.putWatchlistItem(updatedItem);
-            } catch (err) {
-                setWatchlist((prev) =>
-                    prev.map((item) => (item.id === tvId ? itemToUpdate : item))
-                );
-                setError("Failed to save progress. Please try again.");
-                console.error(err);
-            }
-        },
-        [watchlist]
-    );
-
-    // Update tags
-    const updateTags = useCallback(async (mediaId: number, newTags: string[]) => {
-        const itemToUpdate = await dbService.getWatchlistItem(mediaId);
-        if (itemToUpdate) {
-            pendingOpsRef.current.add(mediaId);
-            const updatedItem = { ...itemToUpdate, tags: newTags };
-            await dbService.putWatchlistItem(updatedItem);
-            setWatchlist((prev) =>
-                prev.map((item) => (item.id === mediaId ? updatedItem : item))
-            );
-        }
-    }, []);
-
-    // Export watchlist
-    const exportWatchlist = useCallback(async () => {
-        try {
-            const itemsToExport = await dbService.getAllWatchlistItems();
-            const dataStr = JSON.stringify(itemsToExport, null, 2);
-            const dataBlob = new Blob([dataStr], { type: "application/json" });
-            const url = URL.createObjectURL(dataBlob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = `scenestack_watchlist_${new Date().toISOString().split("T")[0]
-                }.json`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        } catch (err) {
-            setError("Failed to export watchlist.");
-            console.error(err);
-        }
-    }, []);
-
-    // Import watchlist
-    const importWatchlist = useCallback(
-        (event: React.ChangeEvent<HTMLInputElement>) => {
-            const file = event.target.files?.[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                try {
-                    const text = e.target?.result;
-                    if (typeof text !== "string")
-                        throw new Error("File content is not readable.");
-
-                    const importedData = JSON.parse(text) as WatchlistItem[];
-
-                    if (!Array.isArray(importedData)) {
-                        throw new Error("Invalid file format: Not an array.");
-                    }
-
-                    if (
-                        window.confirm(
-                            "Are you sure you want to overwrite your current watchlist? This action cannot be undone."
-                        )
-                    ) {
-                        const strippedItems = importedData.map(item => {
-                            const copy = { ...item } as Record<string, unknown>;
-                            delete copy.images;
-                            delete copy.videos;
-                            delete copy.credits;
-                            delete copy.keywords;
-                            delete copy.recommendations;
-                            delete copy.similar;
-                            delete copy.reviews;
-                            return copy as unknown as WatchlistItem;
-                        });
-                        await dbService.clearAndBulkPut(strippedItems);
-                        setWatchlist(strippedItems);
-                    }
-                } catch (err) {
-                    setError(
-                        "Import failed. Please ensure the file is a valid Scene Stack JSON export."
-                    );
-                    console.error(err);
-                }
-            };
-            reader.onerror = () => {
-                setError("Failed to read the selected file.");
-            };
-            reader.readAsText(file);
-            event.target.value = "";
-        },
-        []
-    );
 
     const value = useMemo(
         () => ({
@@ -496,6 +213,7 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
             allUniqueTags,
             activeTagFilter,
             setActiveTagFilter,
+
             toggleWatchlist,
             toggleWatchlistFromSearchResult,
             toggleMovieWatched,
@@ -503,27 +221,29 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
             toggleSeasonWatched,
             updateTags,
             exportWatchlist,
-            importWatchlist,
+            importWatchlist: handleImportWatchlist,
         }),
         [
             watchlist,
             watchlistIds,
             isLoading,
             error,
+            setError, // stable
             watchlistItems,
             currentlyWatchingItems,
             watchedItems,
             progressMap,
             allUniqueTags,
             activeTagFilter,
-            toggleWatchlist,
-            toggleWatchlistFromSearchResult,
-            toggleMovieWatched,
-            toggleEpisodeWatched,
-            toggleSeasonWatched,
-            updateTags,
-            exportWatchlist,
-            importWatchlist,
+            setActiveTagFilter, // stable
+            toggleWatchlist, // stable
+            toggleWatchlistFromSearchResult, // stable
+            toggleMovieWatched, // stable
+            toggleEpisodeWatched, // stable
+            toggleSeasonWatched, // stable
+            updateTags, // stable
+            exportWatchlist, // stable
+            handleImportWatchlist // stable (created in render but deps are [])
         ]
     );
 
@@ -535,14 +255,9 @@ export const WatchlistProvider: React.FC<{ children: ReactNode }> = ({
 };
 
 // ============================================================================
-// HOOKS
+// HOOKS (Backward Compatible)
 // ============================================================================
 
-/**
- * Full context hook - returns all values (backward compatible)
- * Use this when you need multiple values or when performance isn't critical
- */
-// eslint-disable-next-line react-refresh/only-export-components
 export const useWatchlistContext = (): WatchlistContextType => {
     const context = useContextSelector(WatchlistContext, (ctx) => ctx);
     if (context === undefined) {
@@ -554,69 +269,29 @@ export const useWatchlistContext = (): WatchlistContextType => {
 };
 
 // ============================================================================
-// GRANULAR SELECTOR HOOKS - Use these for better performance
+// OPTIMIZED SELECTOR HOOKS (Delegating to Store directly where possible or Context)
 // ============================================================================
 
-/**
- * Returns only watchlistIds - use when you only need to check if items are in watchlist
- */
-// eslint-disable-next-line react-refresh/only-export-components
-export const useWatchlistIds = (): Set<number> => {
-    const ids = useContextSelector(WatchlistContext, (ctx) => ctx?.watchlistIds);
-    if (ids === undefined) {
-        throw new Error("useWatchlistIds must be used within a WatchlistProvider");
-    }
-    return ids;
+// pointing these to the store directly for better performance!
+// This bypasses the Context completely for these specific hooks, 
+
+export const useWatchlistIds = () => {
+    const watchlist = useWatchlistStore(state => state.watchlist);
+    return useMemo(() => getWatchlistIds(watchlist), [watchlist]);
 };
 
-/**
- * Returns isLoading state
- */
-// eslint-disable-next-line react-refresh/only-export-components
 export const useWatchlistLoading = (): boolean => {
-    const isLoading = useContextSelector(WatchlistContext, (ctx) => ctx?.isLoading);
-    if (isLoading === undefined) {
-        throw new Error("useWatchlistLoading must be used within a WatchlistProvider");
-    }
-    return isLoading;
+    return useWatchlistStore(state => state.isLoading);
 };
 
-/**
- * Returns the full watchlist array
- */
-// eslint-disable-next-line react-refresh/only-export-components
 export const useWatchlist = (): WatchlistItem[] => {
-    const watchlist = useContextSelector(WatchlistContext, (ctx) => ctx?.watchlist);
-    if (watchlist === undefined) {
-        throw new Error("useWatchlist must be used within a WatchlistProvider");
-    }
-    return watchlist;
+    return useWatchlistStore(state => state.watchlist);
 };
 
-/**
- * Returns progress map for currently watching items
- */
-// eslint-disable-next-line react-refresh/only-export-components
-export const useProgressMap = (): Record<string, number> => {
-    const progressMap = useContextSelector(WatchlistContext, (ctx) => ctx?.progressMap);
-    if (progressMap === undefined) {
-        throw new Error("useProgressMap must be used within a WatchlistProvider");
-    }
-    return progressMap;
+export const useProgressMap = () => {
+    const watchlist = useWatchlistStore(state => state.watchlist);
+    const { currentlyWatchingItems } = useMemo(() => getFilteredItems(watchlist, null), [watchlist]);
+    return useMemo(() => getProgressMap(currentlyWatchingItems), [currentlyWatchingItems]);
 };
 
-/**
- * Custom selector hook - use for any custom selection
- */
-// eslint-disable-next-line react-refresh/only-export-components
-export function useWatchlistSelector<T>(
-    selector: (ctx: WatchlistContextType) => T
-): T {
-    const result = useContextSelector(WatchlistContext, (ctx) => {
-        if (ctx === undefined) {
-            throw new Error("useWatchlistSelector must be used within a WatchlistProvider");
-        }
-        return selector(ctx);
-    });
-    return result;
-}
+

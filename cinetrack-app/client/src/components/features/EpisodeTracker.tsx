@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { FiChevronDown, FiLoader, FiImage, FiCheck } from "react-icons/fi";
 import type { TVDetail, SeasonDetail } from "../../types/types";
 import { TMDB_IMAGE_BASE_URL } from "../../constants/constants";
 import { Confetti } from "../common/Confetti";
@@ -58,8 +59,8 @@ export const EpisodeTracker: React.FC<{
         1;
       setSelectedSeason(initialSeason);
       fetchSeasonData(initialSeason);
-      prevWatchedRef.current = watchedEpisodes; // Initialize ref
-    }, [tvShow.id, tvShow.seasons]); // Removed dependencies that would cause re-fetch on every watch action
+      prevWatchedRef.current = watchedEpisodes; 
+    }, [tvShow.id, tvShow.seasons]); 
 
     useEffect(() => {
       if (!seasonData || !seasonData.episodes.length) {
@@ -84,8 +85,8 @@ export const EpisodeTracker: React.FC<{
     const handleSeasonChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
       const newSeason = Number(e.target.value);
       setSelectedSeason(newSeason);
-      setSeasonData(null); // Clear old data immediately
-      setExpandedOverviews(new Set()); // Reset expanded views
+      setSeasonData(null); 
+      setExpandedOverviews(new Set()); 
       fetchSeasonData(newSeason);
     };
 
@@ -128,13 +129,7 @@ export const EpisodeTracker: React.FC<{
                 ))}
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-              <svg
-                className="fill-current h-4 w-4"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-              >
-                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-              </svg>
+              <FiChevronDown className="h-4 w-4" />
             </div>
           </div>
           {seasonData && (
@@ -160,26 +155,7 @@ export const EpisodeTracker: React.FC<{
 
         {isLoading && (
           <div className="flex-grow flex items-center justify-center">
-            <svg
-              className="animate-spin h-8 w-8 text-white"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              ></circle>
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              ></path>
-            </svg>
+            <FiLoader className="animate-spin h-8 w-8 text-white" />
           </div>
         )}
 
@@ -221,9 +197,7 @@ export const EpisodeTracker: React.FC<{
                       />
                     ) : (
                       <div className="w-28 h-16 bg-brand-surface rounded-lg flex items-center justify-center">
-                        <svg className="w-6 h-6 text-brand-text-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.55a2.5 2.5 0 010 4.09L15 18M3 8a2 2 0 012-2h5.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V18a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
-                        </svg>
+                        <FiImage className="w-6 h-6 text-brand-text-dim" />
                       </div>
                     )}
                   </div>
@@ -231,9 +205,7 @@ export const EpisodeTracker: React.FC<{
                   {/* Watched indicator on mobile - shows at left */}
                   <div className="md:hidden flex-shrink-0 w-6 h-6 flex items-center justify-center">
                     {watchedEpisodes[selectedSeason]?.includes(episode.episode_number) ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-brand-primary" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
+                      <FiCheck className="h-5 w-5 text-brand-primary" />
                     ) : (
                       <div className="w-5 h-5 rounded-full border-2 border-white/30" />
                     )}
@@ -273,9 +245,7 @@ export const EpisodeTracker: React.FC<{
                   {/* Watched indicator on desktop - shows at right */}
                   <div className="hidden md:flex flex-shrink-0 pt-1">
                     {watchedEpisodes[selectedSeason]?.includes(episode.episode_number) && (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-brand-primary" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
+                      <FiCheck className="h-5 w-5 text-brand-primary" />
                     )}
                   </div>
                 </li>

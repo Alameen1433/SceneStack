@@ -1,12 +1,13 @@
-import { memo, useEffect } from "react";
-import { useWatchlistContext } from "../contexts/WatchlistContext";
+import { useMemo, memo, useEffect } from "react";
+import { useWatchlistStore, getWatchlistIds } from "../store/useWatchlistStore";
 import { useUIContext } from "../contexts/UIContext";
 import { useRecommendations } from "../hooks/useRecommendations";
 import { MediaGrid } from "../components/media/MediaGrid";
 import { MediaGridSkeleton } from "../components/common/MediaCardSkeleton";
 
 export const RecommendationsPage: React.FC = memo(() => {
-    const { watchlist, watchlistIds } = useWatchlistContext();
+    const watchlist = useWatchlistStore(state => state.watchlist);
+    const watchlistIds = useMemo(() => getWatchlistIds(watchlist), [watchlist]);
     const { handleSelectMedia, selectedMediaId } = useUIContext();
     const { recommendations, isLoading, fetchRecommendations } = useRecommendations(
         watchlist,

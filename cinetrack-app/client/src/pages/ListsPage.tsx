@@ -1,20 +1,27 @@
-import React, { memo } from "react";
-import { useWatchlistContext } from "../contexts/WatchlistContext";
+import React, { memo, useMemo } from "react";
+import { useWatchlistStore, getWatchlistIds, getFilteredItems, getProgressMap, getAllUniqueTags } from "../store/useWatchlistStore";
 import { useUIContext } from "../contexts/UIContext";
 import { MediaSection } from "../components/common/MediaSection";
 import { HorizontalMediaScroll } from "../components/common/HorizontalMediaScroll";
 
 export const ListsPage: React.FC = memo(() => {
-    const {
-        watchlistIds,
-        watchlistItems,
-        currentlyWatchingItems,
-        watchedItems,
-        progressMap,
-        allUniqueTags,
-        activeTagFilter,
-        setActiveTagFilter,
-    } = useWatchlistContext();
+    const watchlist = useWatchlistStore(state => state.watchlist);
+    const activeTagFilter = useWatchlistStore(state => state.activeTagFilter);
+    const setActiveTagFilter = useWatchlistStore(state => state.setActiveTagFilter);
+
+    const watchlistIds = useMemo(() => getWatchlistIds(watchlist), [watchlist]);
+
+    const { watchlistItems, currentlyWatchingItems, watchedItems } = useMemo(
+        () => getFilteredItems(watchlist, activeTagFilter),
+        [watchlist, activeTagFilter]
+    );
+
+    const progressMap = useMemo(
+        () => getProgressMap(currentlyWatchingItems),
+        [currentlyWatchingItems]
+    );
+
+    const allUniqueTags = useMemo(() => getAllUniqueTags(watchlist), [watchlist]);
     const { handleSelectMedia, selectedMediaId } = useUIContext();
 
     return (

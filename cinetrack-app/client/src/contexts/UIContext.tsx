@@ -30,7 +30,6 @@ interface UIContextType {
     openSettings: () => void;
     closeSettings: () => void;
 
-    // View All section state
     viewAllSection: { title: string; items: Media[] } | null;
     openViewAll: (title: string, items: Media[]) => void;
     closeViewAll: () => void;
@@ -88,34 +87,15 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         [performSearch]
     );
 
-    // Handle browser back/forward
+    // Consolidate all popstate handling into one effect to prevent race conditions
     useEffect(() => {
-        const handleSearchPopState = () => {
+        const handlePopState = () => {
             const params = new URLSearchParams(window.location.search);
             const query = params.get("q") || "";
             performSearch(query);
             if (!query) {
                 setIsSearchExpanded(false);
             }
-        };
-
-        window.addEventListener("popstate", handleSearchPopState);
-
-        const initialParams = new URLSearchParams(window.location.search);
-        const initialQuery = initialParams.get("q");
-        if (initialQuery) {
-            performSearch(initialQuery);
-            setIsSearchExpanded(true);
-        }
-
-        return () => {
-            window.removeEventListener("popstate", handleSearchPopState);
-        };
-    }, [performSearch]);
-
-    // Handle browser back/forward for modals
-    useEffect(() => {
-        const handleModalPopState = () => {
             const hash = window.location.hash;
             if (!hash.startsWith("#media/") && !hash.startsWith("#settings") && !hash.startsWith("#viewall/")) {
                 setSelectedMediaId(null);
@@ -125,27 +105,35 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
                 setViewAllSection(null);
             }
         };
-        window.addEventListener("popstate", handleModalPopState);
-        return () => {
-            window.removeEventListener("popstate", handleModalPopState);
-        };
-    }, []);
 
-    useEffect(() => {
+        window.addEventListener("popstate", handlePopState);
+
+        // Initial State Checks
+        const initialParams = new URLSearchParams(window.location.search);
+        const initialQuery = initialParams.get("q");
+        if (initialQuery) {
+            performSearch(initialQuery);
+            setIsSearchExpanded(true);
+        }
+
+        // Cleanup invalid hashes on mount
         const hash = window.location.hash;
         if (hash.startsWith("#media/") || hash === "#settings" || hash.startsWith("#viewall/")) {
+            // Replace invalid initial hash states with clean URL
             window.history.replaceState(
                 null,
                 "",
                 window.location.pathname + window.location.search
             );
         }
-    }, []);
 
-    // Select media and open detail modal
+        return () => {
+            window.removeEventListener("popstate", handlePopState);
+        };
+    }, [performSearch]);
+
     const handleSelectMedia = useCallback(
         async (media: Media, rect: DOMRect) => {
-            // Prevent opening if already animating
             if (animatingMedia) return;
 
             window.history.pushState(
@@ -171,7 +159,7 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
             } catch (err) {
                 setError("Failed to fetch media details.");
                 console.error(err);
-                setAnimatingMedia(null); 
+                setAnimatingMedia(null);
                 window.history.back();
             }
         },
@@ -179,7 +167,6 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     );
 
     const handleCloseModal = useCallback(() => {
-        // Clear states immediately to prevent stuck state
         setAnimatingMedia(null);
         setSelectedMediaId(null);
         setDetailedMedia(null);

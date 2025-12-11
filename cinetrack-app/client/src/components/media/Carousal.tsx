@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { TMDB_IMAGE_BASE_URL } from "../../constants/constants";
 import type { SearchResult } from "../../types/types";
-import { getMediaImages } from "../../services/tmdbService";
-import { selectBestLogo, getLogoUrl } from "../../utils/logoHelpers";
+import { fetchAndCacheLogo, getCachedLogo } from "../../services/tmdbService";
+import { FiInfo, FiCheck, FiPlus, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
 interface CarouselProps {
     items: SearchResult[];
@@ -10,9 +10,6 @@ interface CarouselProps {
     onToggleWatchlist: (media: SearchResult) => void;
     watchlistIds: Set<number>;
 }
-
-// Global logo cache to persist across re-renders and component unmounts
-const logoCache = new Map<number, string | null>();
 
 export const Carousel: React.FC<CarouselProps> = ({
     items,
@@ -24,8 +21,9 @@ export const Carousel: React.FC<CarouselProps> = ({
     const [logoUrls, setLogoUrls] = useState<Record<number, string | null>>(() => {
         const initial: Record<number, string | null> = {};
         items.forEach(item => {
-            if (logoCache.has(item.id)) {
-                initial[item.id] = logoCache.get(item.id)!;
+            const cached = getCachedLogo(item.id);
+            if (cached !== undefined) {
+                initial[item.id] = cached;
             }
         });
         return initial;
@@ -60,18 +58,10 @@ export const Carousel: React.FC<CarouselProps> = ({
     useEffect(() => {
         const fetchLogos = async () => {
             for (const item of items) {
-                if (logoCache.has(item.id)) continue;
+                if (getCachedLogo(item.id) !== undefined) continue;
 
-                try {
-                    const imageInfo = await getMediaImages(item.id, item.media_type);
-                    const bestLogo = selectBestLogo(imageInfo.logos);
-                    const url = getLogoUrl(bestLogo) || null;
-                    logoCache.set(item.id, url);
-                    setLogoUrls(prev => ({ ...prev, [item.id]: url }));
-                } catch {
-                    logoCache.set(item.id, null);
-                    setLogoUrls(prev => ({ ...prev, [item.id]: null }));
-                }
+                const url = await fetchAndCacheLogo(item.id, item.media_type);
+                setLogoUrls(prev => ({ ...prev, [item.id]: url }));
             }
         };
 
@@ -207,9 +197,7 @@ export const Carousel: React.FC<CarouselProps> = ({
                             onClick={handleViewDetails}
                             className="bg-brand-primary text-brand-bg font-semibold py-2.5 px-5 md:px-6 rounded-lg transition-all hover:bg-brand-secondary hover:scale-105 active:scale-95 flex items-center gap-2 text-sm md:text-base shadow-lg shadow-brand-primary/20"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-5 md:w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                            </svg>
+                            <FiInfo className="h-4 w-4 md:h-5 md:w-5" />
                             More Info
                         </button>
 
@@ -222,13 +210,9 @@ export const Carousel: React.FC<CarouselProps> = ({
                             aria-label={isInWatchlist ? "Remove from watchlist" : "Add to watchlist"}
                         >
                             {isInWatchlist ? (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                </svg>
+                                <FiCheck className="h-5 w-5" />
                             ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                                </svg>
+                                <FiPlus className="h-5 w-5" />
                             )}
                         </button>
                     </div>
@@ -243,18 +227,14 @@ export const Carousel: React.FC<CarouselProps> = ({
                         className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 text-white transition-all hover:scale-110 z-20"
                         aria-label="Previous"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                        </svg>
+                        <FiChevronLeft className="h-5 w-5" />
                     </button>
                     <button
                         onClick={goToNext}
                         className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 text-white transition-all hover:scale-110 z-20"
                         aria-label="Next"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                        </svg>
+                        <FiChevronRight className="h-5 w-5" />
                     </button>
                 </>
             )}

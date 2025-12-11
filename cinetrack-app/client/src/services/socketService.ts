@@ -21,14 +21,15 @@ class SocketService {
             return;
         }
 
-        // Connect to the same origin (works for both dev proxy and production)
+        // Connect to the same origin
         this.socket = io({
             auth: { token },
             transports: ["websocket", "polling"],
             reconnection: true,
             reconnectionAttempts: 10,
             reconnectionDelay: 1000,
-            reconnectionDelayMax: 5000,
+            reconnectionDelayMax: 10000,
+            timeout: 20000,
         });
 
         this.socket.on("connect", () => {
