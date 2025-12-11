@@ -22,11 +22,15 @@ export default defineConfig({
   },
   build: {
     sourcemap: false,
+    target: 'es2020',
+    cssCodeSplit: true,
+    minify: 'esbuild',
     rollupOptions: {
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'scheduler'],
-          'db': ['idb'],
+          'socket': ['socket.io-client'],
+          'context-selector': ['use-context-selector'],
         },
       },
     },

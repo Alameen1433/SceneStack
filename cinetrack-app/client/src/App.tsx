@@ -4,7 +4,6 @@ import { WatchlistProvider, useWatchlistContext } from "./contexts/WatchlistCont
 import { UIProvider, useUIContext } from "./contexts/UIContext";
 import { DiscoverProvider } from "./contexts/DiscoverContext";
 import { AuthProvider, useAuthContext } from "./contexts/AuthContext";
-import { AuthPage } from "./pages/AuthPage";
 import { SearchBar } from "./components/common/SearchBar";
 import { SearchPalette } from "./components/common/SearchPalette";
 import { LoadingPosterAnimation } from "./components/common/LoadingPosterAnimation";
@@ -13,11 +12,13 @@ import { SideNavBar } from "./components/layout/SideNavBar";
 import { MediaGrid } from "./components/media/MediaGrid";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import { getTVSeasonDetails } from "./services/tmdbService";
-import { DiscoverPage } from "./pages/DiscoverPage";
-import { ListsPage } from "./pages/ListsPage";
-import { RecommendationsPage } from "./pages/RecommendationsPage";
-import { StatisticsPage } from "./pages/StatisticsPage";
-import { ViewAllPage } from "./pages/ViewAllPage";
+
+const AuthPage = lazy(() => import("./pages/AuthPage").then(m => ({ default: m.AuthPage })));
+const DiscoverPage = lazy(() => import("./pages/DiscoverPage").then(m => ({ default: m.DiscoverPage })));
+const ListsPage = lazy(() => import("./pages/ListsPage").then(m => ({ default: m.ListsPage })));
+const RecommendationsPage = lazy(() => import("./pages/RecommendationsPage").then(m => ({ default: m.RecommendationsPage })));
+const StatisticsPage = lazy(() => import("./pages/StatisticsPage").then(m => ({ default: m.StatisticsPage })));
+const ViewAllPage = lazy(() => import("./pages/ViewAllPage").then(m => ({ default: m.ViewAllPage })));
 
 // Lazy load heavy modal components
 const MediaDetailModal = lazy(() =>
@@ -278,12 +279,16 @@ const MainContent: React.FC = memo(() => {
             <p>Loading your watchlist...</p>
           </div>
         ) : !isSearchLoading && (
-          <>
+          <Suspense fallback={
+            <div className="flex justify-center items-center py-20">
+              <div className="animate-pulse text-brand-text-dim">Loading...</div>
+            </div>
+          }>
             {activeTab === "discover" && <DiscoverPage />}
             {activeTab === "lists" && <ListsPage />}
             {activeTab === "recommendations" && <RecommendationsPage />}
             {activeTab === "stats" && <StatisticsPage />}
-          </>
+          </Suspense>
         )}
       </div>
     </main>
@@ -367,11 +372,17 @@ const AppLayout: React.FC = () => {
   if (viewAllSection) {
     return (
       <div className="min-h-screen bg-brand-bg text-brand-text-light font-sans">
-        <ViewAllPage
-          title={viewAllSection.title}
-          items={viewAllSection.items}
-          onClose={closeViewAll}
-        />
+        <Suspense fallback={
+          <div className="flex justify-center items-center min-h-screen">
+            <div className="animate-pulse text-brand-text-dim">Loading...</div>
+          </div>
+        }>
+          <ViewAllPage
+            title={viewAllSection.title}
+            items={viewAllSection.items}
+            onClose={closeViewAll}
+          />
+        </Suspense>
         <Modals />
       </div>
     );
@@ -433,7 +444,13 @@ const AuthenticatedApp: React.FC = () => {
   if (!isAuthenticated) {
     return (
       <div className="animate-fadeIn">
-        <AuthPage />
+        <Suspense fallback={
+          <div className="min-h-screen bg-brand-bg flex items-center justify-center">
+            <div className="animate-pulse text-brand-text-dim">Loading...</div>
+          </div>
+        }>
+          <AuthPage />
+        </Suspense>
       </div>
     );
   }

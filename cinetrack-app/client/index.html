@@ -8,50 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            'sans': ['Outfit', 'sans-serif'],
-            'display': ['Bebas Neue', 'sans-serif'],
-          },
-          colors: {
-            'brand-bg': '#0A0A0B',
-            'brand-surface': '#161618',
-            'brand-surface-alt': '#1E1E21',
-            'brand-primary': '#D4A855',
-            'brand-secondary': '#E8C56B',
-            'brand-accent': '#F5E6C8',
-            'brand-text-light': '#F2F2F2',
-            'brand-text-dim': '#8A8A8E',
-            'brand-text-muted': '#5C5C60',
-          }
-        }
-      }
-    }
-  </script>
-  <style>
-    body {
-      /* Safe area for notched devices */
-      padding-top: env(safe-area-inset-top);
-      padding-left: env(safe-area-inset-left);
-      padding-right: env(safe-area-inset-right);
-    }
-  </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@19",
-    "react/": "https://esm.sh/react@19/",
-    "react-dom": "https://esm.sh/react-dom@19",
-    "react-dom/": "https://esm.sh/react-dom@19/"
-  }
-}
-</script>
 </head>
-<!--test commit-->
+
 <body class="bg-brand-bg">
   <div id="root"></div>
   <script type="module" src="src/index.tsx"></script>

@@ -36,7 +36,6 @@ export const SearchPalette: React.FC<SearchPaletteProps> = ({
         return () => document.removeEventListener("keydown", handleKeyDown);
     }, [isOpen]);
 
-    // Focus input when modal opens
     useEffect(() => {
         if (isOpen) {
             setTimeout(() => inputRef.current?.focus(), 50);
@@ -62,13 +61,11 @@ export const SearchPalette: React.FC<SearchPaletteProps> = ({
         handleClose();
     };
 
-    // Detect OS for shortcut display
     const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
     const shortcutKey = isMac ? "⌘" : "Ctrl";
 
     return (
         <>
-            {/* Search Trigger Button */}
             <button
                 onClick={() => setIsOpen(true)}
                 className="w-full max-w-xl flex items-center gap-3 px-4 py-2.5 bg-brand-surface/50 hover:bg-brand-surface border border-white/5 hover:border-brand-primary/30 rounded-lg text-brand-text-dim transition-all duration-200 group"

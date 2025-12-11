@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { useAuthContext } from "../contexts/AuthContext";
 
-// Password input with show/hide toggle
 const PasswordInput: React.FC<{
     id: string;
     value: string;
@@ -50,6 +49,7 @@ export const AuthPage: React.FC = () => {
     const [password, setPassword] = useState("");
     const [inviteCode, setInviteCode] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
     const { login, register, error, clearError } = useAuthContext();
 
@@ -75,13 +75,29 @@ export const AuthPage: React.FC = () => {
         clearError();
     };
 
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        const { clientX, clientY } = e;
+        setMousePosition({ x: clientX, y: clientY });
+    };
+
     return (
-        <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4 overflow-hidden">
-            {/* Cinema Noir Background */}
+        <div
+            className="min-h-screen bg-brand-bg flex items-center justify-center p-4 overflow-hidden"
+            onMouseMove={handleMouseMove}
+        >
             <div className="absolute inset-0 overflow-hidden">
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_#1a1a1e_0%,_#0A0A0B_50%)]" />
-                <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand-primary/8 rounded-full blur-[120px]" />
-                <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-brand-secondary/6 rounded-full blur-[100px]" />
+                <div className="absolute inset-0 animate-gradient-slow bg-gradient-radial will-change-[background-position]" />
+                <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand-primary/20 rounded-full blur-[120px] animate-float-slow will-change-transform" />
+                <div className="hidden sm:block absolute bottom-0 right-1/4 w-80 h-80 bg-brand-secondary/15 rounded-full blur-[100px] animate-float-reverse will-change-transform" />
+                <div className="hidden md:block absolute top-1/2 left-1/2 w-72 h-72 bg-brand-primary/12 rounded-full blur-[100px] animate-float-medium will-change-transform" />
+                <div
+                    className="hidden md:block absolute w-[600px] h-[600px] bg-brand-primary/10 rounded-full blur-[150px] pointer-events-none transition-all duration-500 ease-out will-change-[left,top]"
+                    style={{
+                        left: `${mousePosition.x}px`,
+                        top: `${mousePosition.y}px`,
+                        transform: 'translate(-50%, -50%)',
+                    }}
+                />
                 <div className="absolute inset-0 opacity-[0.015] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIzMDAiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]" />
             </div>
 
@@ -94,7 +110,7 @@ export const AuthPage: React.FC = () => {
                         <h1 className="font-display text-5xl tracking-wide text-white">
                             SCENE<span className="text-brand-primary">STACK</span>
                         </h1>
-                        <p className="text-brand-text-dim mt-2 text-sm tracking-wider uppercase">Your Cinematic Journey</p>
+                        <p className="text-brand-text-dim mt-2 text-sm tracking-wider uppercase">Tracking the shows you'll definitely finish… eventually… probably not.</p>
                     </div>
 
                     {/* Mode Toggle */}
@@ -215,7 +231,6 @@ export const AuthPage: React.FC = () => {
                     </p>
                 </div>
 
-                {/* Decorative Border Glow */}
                 <div className="absolute -z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[102%] h-[102%] bg-gradient-to-b from-brand-primary/20 via-transparent to-transparent rounded-2xl blur-sm" />
             </div>
 
@@ -230,11 +245,70 @@ export const AuthPage: React.FC = () => {
           animation: shake 0.3s ease-in-out;
         }
         @keyframes slideDown {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
+          from { 
+            opacity: 0; 
+            transform: translate3d(0, -10px, 0);
+          }
+          to { 
+            opacity: 1; 
+            transform: translate3d(0, 0, 0);
+          }
         }
         .animate-slideDown {
           animation: slideDown 0.3s ease-out;
+          will-change: transform, opacity;
+        }
+        
+
+        @keyframes gradientShift {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        .bg-gradient-radial {
+          background: radial-gradient(
+            ellipse at 30% 20%, 
+            rgba(212, 168, 85, 0.15) 0%, 
+            rgba(10, 10, 11, 1) 35%,
+            rgba(5, 5, 6, 1) 100%
+          );
+          background-size: 200% 200%;
+        }
+        .animate-gradient-slow {
+          animation: gradientShift 20s ease infinite;
+        }
+        
+        @keyframes float {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(30px, -30px) scale(1.05); }
+          66% { transform: translate(-20px, 20px) scale(0.95); }
+        }
+        @keyframes floatReverse {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(-30px, 30px) scale(0.95); }
+          66% { transform: translate(20px, -20px) scale(1.05); }
+        }
+        @keyframes floatMedium {
+          0%, 100% { transform: translate(-50%, -50%) scale(1); }
+          50% { transform: translate(-50%, -50%) translate(40px, 40px) scale(1.1); }
+        }
+        .animate-float-slow {
+          animation: float 25s ease-in-out infinite;
+        }
+        .animate-float-reverse {
+          animation: floatReverse 30s ease-in-out infinite;
+        }
+        .animate-float-medium {
+          animation: floatMedium 20s ease-in-out infinite;
+        }
+        
+        @media (max-width: 768px) {
+          .animate-float-slow {
+            animation-duration: 15s;
+          }
+          .animate-gradient-slow {
+            animation-duration: 12s;
+          }
         }
       `}</style>
         </div>
