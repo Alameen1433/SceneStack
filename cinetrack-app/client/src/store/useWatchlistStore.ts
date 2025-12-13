@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import * as dbService from '../services/dbService';
 import { socketService } from '../services/socketService';
-import { getMovieDetails, getTVDetails } from '../services/tmdbService';
+import { getMovieDetails, getTVDetails, getMovieRecommendations, getTVRecommendations } from '../services/tmdbService';
 import type {
     WatchlistItem,
     MovieDetail,
@@ -16,6 +16,9 @@ interface WatchlistState {
     isLoading: boolean;
     error: string | null;
     activeTagFilter: string | null;
+
+    recommendations: SearchResult[];
+    recommendationsLoading: boolean;
 
     setWatchlist: (items: WatchlistItem[]) => void;
     setIsLoading: (isLoading: boolean) => void;
@@ -32,6 +35,7 @@ interface WatchlistState {
     updateTags: (mediaId: number, newTags: string[]) => Promise<void>;
     exportWatchlist: () => Promise<void>;
     importWatchlist: (file: File) => Promise<void>;
+    fetchRecommendations: () => Promise<void>;
 
     syncItem: (item: WatchlistItem) => void;
     deleteItem: (id: number) => void;
@@ -58,6 +62,8 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
     isLoading: true,
     error: null,
     activeTagFilter: null,
+    recommendations: [],
+    recommendationsLoading: false,
 
     setWatchlist: (items) => set({ watchlist: items }),
     setIsLoading: (isLoading) => set({ isLoading }),
@@ -321,6 +327,47 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
             };
             reader.readAsText(file);
         });
+    },
+
+    fetchRecommendations: async () => {
+        const { watchlist } = get();
+
+        if (watchlist.length === 0) {
+            set({ recommendations: [] });
+            return;
+        }
+
+        set({ recommendationsLoading: true });
+
+        try {
+            const watchlistIds = new Set(watchlist.map(item => item.id));
+            const shuffled = [...watchlist].sort(() => 0.5 - Math.random());
+            const seedItems = shuffled.slice(0, 3);
+
+            const recPromises = seedItems.map((item) =>
+                item.media_type === "movie"
+                    ? getMovieRecommendations(item.id)
+                    : getTVRecommendations(item.id)
+            );
+
+            const recArrays = await Promise.all(recPromises);
+            const flatRecs = recArrays.flat();
+
+            const uniqueRecsMap = new Map<number, SearchResult>();
+            flatRecs.forEach((rec) => {
+                if (!watchlistIds.has(rec.id) && rec.poster_path) {
+                    uniqueRecsMap.set(rec.id, rec);
+                }
+            });
+
+            set({
+                recommendations: Array.from(uniqueRecsMap.values()),
+                recommendationsLoading: false
+            });
+        } catch (err) {
+            console.error("Failed to fetch recommendations:", err);
+            set({ recommendationsLoading: false });
+        }
     },
 
     // Socket Helpers
