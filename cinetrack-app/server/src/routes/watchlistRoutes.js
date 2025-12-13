@@ -111,6 +111,17 @@ module.exports = (watchlistCollection, broadcastToUser, client) => {
         })
     );
 
+    // DELETE /api/watchlist (Wipe all data)
+    router.delete(
+        "/",
+        authMiddleware,
+        asyncHandler(async (req, res) => {
+            await watchlistCollection.deleteMany({ userId: req.userId });
+            broadcastToUser(req.userId, "watchlist:sync", { trigger: "wipe" });
+            res.status(204).send();
+        })
+    );
+
     // POST /api/watchlist/import
     router.post(
         "/import",

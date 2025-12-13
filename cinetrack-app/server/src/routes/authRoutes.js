@@ -124,5 +124,21 @@ module.exports = (usersCollection) => {
         }
     });
 
+    // DELETE /api/auth - Delete account
+    router.delete("/", authMiddleware, async (req, res) => {
+        try {
+            const userId = new ObjectId(req.userId);
+            const userResult = await usersCollection.deleteOne({ _id: userId });
+            if (userResult.deletedCount === 0) {
+                return res.status(404).json({ message: "User not found" });
+            }
+
+            res.status(204).send();
+        } catch (err) {
+            console.error("Delete account error:", err);
+            res.status(500).json({ message: "Server error" });
+        }
+    });
+
     return router;
 };

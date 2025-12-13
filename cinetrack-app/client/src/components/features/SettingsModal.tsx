@@ -12,7 +12,11 @@ import {
   FiLogOut,
   FiDownload,
   FiUpload,
-  FiX
+  FiX,
+  FiTrash2,
+  FiAlertTriangle,
+  FiChevronRight,
+  FiChevronDown
 } from "react-icons/fi";
 
 // API requests use relative URLs - Vite proxy handles forwarding in dev
@@ -151,6 +155,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
+  // Wipe Watchlist state
+  // Wipe/Delete state
+  const [isDangerZoneExpanded, setIsDangerZoneExpanded] = useState(false);
+  const [showDangerConfirm, setShowDangerConfirm] = useState(false);
+  const [dangerAction, setDangerAction] = useState<"wipe" | "delete">("wipe");
+  const [confirmationText, setConfirmationText] = useState("");
+  const [isProcessingDanger, setIsProcessingDanger] = useState(false);
+
   // Lock body scroll when modal is open
   useEffect(() => {
     if (!isOpen) return;
@@ -176,6 +188,43 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setNewPassword("");
     setConfirmPassword("");
     setPasswordError(null);
+  };
+
+  const handleDangerAction = async () => {
+    const requiredText = dangerAction === "wipe" ? "delete my watchlist" : "delete my account";
+    if (confirmationText !== requiredText) return;
+
+    setIsProcessingDanger(true);
+    try {
+      const token = getAuthToken();
+
+      if (dangerAction === "wipe") {
+        const response = await fetch(`${API_BASE_URL}/api/watchlist`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) throw new Error("Failed to wipe watchlist");
+
+        setShowDangerConfirm(false);
+        onClose();
+        window.location.reload();
+      } else {
+        const response = await fetch(`${API_BASE_URL}/api/auth`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) throw new Error("Failed to delete account");
+
+        logout();
+        onClose();
+        setShowDangerConfirm(false);
+      }
+    } catch (error) {
+      console.error(`Failed to ${dangerAction}:`, error);
+      alert(`Failed to ${dangerAction === "wipe" ? "wipe watchlist" : "delete account"}. Please try again.`);
+    } finally {
+      setIsProcessingDanger(false);
+    }
   };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -412,6 +461,55 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </section>
 
           {/* Storage Stats */}
+          <section className="pt-4 border-t border-white/10">
+            <button
+              onClick={() => setIsDangerZoneExpanded(!isDangerZoneExpanded)}
+              className="w-full flex items-center justify-between text-left mb-3 group"
+            >
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2 group-hover:text-red-400 transition-colors">
+                <FiAlertTriangle className="h-4 w-4 text-red-500" />
+                Danger Zone
+              </h3>
+              {isDangerZoneExpanded ? (
+                <FiChevronDown className="h-4 w-4 text-brand-text-dim" />
+              ) : (
+                <FiChevronRight className="h-4 w-4 text-brand-text-dim" />
+              )}
+            </button>
+
+            {isDangerZoneExpanded && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 animate-fadeIn">
+                <p className="text-sm text-brand-text-dim mb-4">
+                  These actions are permanent and cannot be undone.
+                </p>
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => {
+                      setDangerAction("wipe");
+                      setShowDangerConfirm(true);
+                      setConfirmationText("");
+                    }}
+                    className="w-full py-2.5 px-4 rounded-lg font-semibold transition-colors bg-red-500/80 hover:bg-red-600 text-white flex items-center justify-center gap-2"
+                  >
+                    <FiTrash2 className="h-4 w-4" />
+                    Wipe Watchlist
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDangerAction("delete");
+                      setShowDangerConfirm(true);
+                      setConfirmationText("");
+                    }}
+                    className="w-full py-2.5 px-4 rounded-lg font-semibold transition-colors bg-white/5 hover:bg-red-500/20 text-red-500 border border-red-500/30 hover:border-red-500/50 flex items-center justify-center gap-2"
+                  >
+                    <FiTrash2 className="h-4 w-4" />
+                    Delete Account
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+
           <StorageStats />
 
           {/* App Info */}
@@ -437,6 +535,65 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         }}
         onCancel={() => setShowLogoutConfirm(false)}
       />
+
+      {/* Danger Confirmation Modal - Nested */}
+      {showDangerConfirm && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="bg-brand-surface border border-red-500/30 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-fadeIn">
+            <h3 className="text-xl font-bold text-white mb-2">
+              {dangerAction === "wipe" ? "Wipe Watchlist?" : "Delete Account?"}
+            </h3>
+            <p className="text-brand-text-dim text-sm mb-6">
+              This action cannot be undone. This will permanently delete your {dangerAction === "wipe" ? "entire watchlist history" : "account and all associated data"}.
+            </p>
+
+            <div className="mb-6">
+              <label className="block text-xs text-brand-text-dim mb-2">
+                Type <span className="text-white font-mono bg-white/10 px-1 rounded">
+                  {dangerAction === "wipe" ? "delete my watchlist" : "delete my account"}
+                </span> to confirm
+              </label>
+              <input
+                type="text"
+                value={confirmationText}
+                onChange={(e) => setConfirmationText(e.target.value)}
+                className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-white focus:outline-none focus:border-red-500 transition-colors"
+                placeholder={dangerAction === "wipe" ? "delete my watchlist" : "delete my account"}
+                autoFocus
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDangerConfirm(false)}
+                className="flex-1 py-2 rounded-lg font-medium text-brand-text-dim hover:text-white hover:bg-white/10 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDangerAction}
+                disabled={
+                  confirmationText !== (dangerAction === "wipe" ? "delete my watchlist" : "delete my account") ||
+                  isProcessingDanger
+                }
+                className="flex-1 py-2 rounded-lg font-medium bg-red-500 hover:bg-red-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              >
+                {isProcessingDanger ? (
+                  <>
+                    <FiLoader className="animate-spin h-4 w-4" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete everything"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
