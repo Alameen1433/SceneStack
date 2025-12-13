@@ -15,6 +15,7 @@ const { authMiddleware, JWT_SECRET } = require("./middleware/authMiddleware");
 const { errorHandler } = require("./middleware/errorHandler");
 const authRoutes = require("./routes/authRoutes");
 const watchlistRoutes = require("./routes/watchlistRoutes");
+const tmdbRoutes = require("./routes/tmdbRoutes");
 
 const app = express();
 const server = http.createServer(app);
@@ -139,6 +140,9 @@ app.use("/api/auth", authLimiter, (req, res, next) => {
 app.use("/api/watchlist", (req, res, next) => {
   watchlistRoutes(watchlistCollection, broadcastToUser, client)(req, res, next);
 });
+
+// --- TMDB Proxy Routes ---
+app.use("/api/tmdb", tmdbRoutes);
 
 
 

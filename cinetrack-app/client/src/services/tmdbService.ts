@@ -11,6 +11,7 @@ import type {
 } from "../types/types";
 
 const TMDB_API_READ_ACCESS_TOKEN = import.meta.env.VITE_TMDB_API_READ_ACCESS_TOKEN;
+const API_BASE_URL = "/api/tmdb";
 
 const fetchFromTMDB = async <T>(endpoint: string): Promise<T> => {
   const url = `${TMDB_API_BASE_URL}/${endpoint}`;
@@ -25,21 +26,48 @@ const fetchFromTMDB = async <T>(endpoint: string): Promise<T> => {
   const response = await fetch(url, options);
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({})); 
+    const errorData = await response.json().catch(() => ({}));
     console.error("TMDB API Error:", errorData);
     throw new Error(`TMDB API request failed: ${response.statusText}`);
   }
   return response.json();
 };
 
+const fetchFromProxy = async <T>(endpoint: string): Promise<T> => {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`);
+  if (!response.ok) {
+    throw new Error(`Proxy API error: ${response.status}`);
+  }
+  return response.json();
+};
+
+const fetchWithFallback = async <T>(
+  proxyEndpoint: string,
+  tmdbFallback: () => Promise<T>
+): Promise<T> => {
+  try {
+    return await fetchFromProxy<T>(proxyEndpoint);
+  } catch (err) {
+    console.warn("Proxy failed, falling back to direct TMDB:", err);
+    return tmdbFallback();
+  }
+};
+
 export const searchMedia = async (query: string): Promise<SearchResult[]> => {
-  const data = await fetchFromTMDB<{ results: SearchResult[] }>(
-    `search/multi?query=${encodeURIComponent(query)}`
+  const data = await fetchWithFallback<{ results: SearchResult[] }>(
+    `/search?q=${encodeURIComponent(query)}`,
+    async () => {
+      const response = await fetchFromTMDB<{ results: SearchResult[] }>(
+        `search/multi?query=${encodeURIComponent(query)}`
+      );
+      return {
+        results: response.results.filter(
+          (item) => item.media_type === "movie" || item.media_type === "tv"
+        ),
+      };
+    }
   );
-  // Filter out people from search results
-  return data.results.filter(
-    (item) => item.media_type === "movie" || item.media_type === "tv"
-  );
+  return data.results;
 };
 
 export const getTrendingMedia = async (): Promise<SearchResult[]> => {
@@ -67,58 +95,87 @@ export const getPopularTVShows = async (): Promise<SearchResult[]> => {
 };
 
 export const getMovieDetails = async (id: number): Promise<MovieDetail> => {
-  const details = await fetchFromTMDB<Omit<MovieDetail, "media_type">>(
-    `movie/${id}?append_to_response=videos,credits,images`
+  return fetchWithFallback<MovieDetail>(
+    `/details/movie/${id}`,
+    async () => {
+      const details = await fetchFromTMDB<Omit<MovieDetail, "media_type">>(
+        `movie/${id}?append_to_response=videos,credits,images`
+      );
+      return { ...details, media_type: "movie" };
+    }
   );
-  return { ...details, media_type: "movie" };
 };
 
 export const getTVDetails = async (id: number): Promise<TVDetail> => {
-  const details = await fetchFromTMDB<Omit<TVDetail, "media_type">>(
-    `tv/${id}?append_to_response=videos,credits,images`
+  return fetchWithFallback<TVDetail>(
+    `/details/tv/${id}`,
+    async () => {
+      const details = await fetchFromTMDB<Omit<TVDetail, "media_type">>(
+        `tv/${id}?append_to_response=videos,credits,images`
+      );
+      return { ...details, media_type: "tv" };
+    }
   );
-  return { ...details, media_type: "tv" };
 };
 
 export const getTVSeasonDetails = async (
   tvId: number,
   seasonNumber: number
 ): Promise<SeasonDetail> => {
-  return fetchFromTMDB<SeasonDetail>(`tv/${tvId}/season/${seasonNumber}`);
+  return fetchWithFallback<SeasonDetail>(
+    `/season/${tvId}/${seasonNumber}`,
+    () => fetchFromTMDB<SeasonDetail>(`tv/${tvId}/season/${seasonNumber}`)
+  );
 };
 
 export const getWatchProviders = async (
   id: number,
   media_type: "movie" | "tv"
 ): Promise<WatchProvidersResponse> => {
-  return fetchFromTMDB<WatchProvidersResponse>(
-    `${media_type}/${id}/watch/providers`
+  return fetchWithFallback<WatchProvidersResponse>(
+    `/providers/${media_type}/${id}`,
+    () => fetchFromTMDB<WatchProvidersResponse>(`${media_type}/${id}/watch/providers`)
   );
 };
 
 export const getMovieRecommendations = async (
   id: number
 ): Promise<SearchResult[]> => {
-  const data = await fetchFromTMDB<{
-    results: Omit<SearchResult, "media_type">[];
-  }>(`movie/${id}/recommendations`);
-  return data.results.map((item) => ({ ...item, media_type: "movie" }));
+  const data = await fetchWithFallback<{ results: SearchResult[] }>(
+    `/recommendations/movie/${id}`,
+    async () => {
+      const response = await fetchFromTMDB<{ results: Omit<SearchResult, "media_type">[] }>(
+        `movie/${id}/recommendations`
+      );
+      return { results: response.results.map((item) => ({ ...item, media_type: "movie" as const })) };
+    }
+  );
+  return data.results;
 };
 
 export const getTVRecommendations = async (
   id: number
 ): Promise<SearchResult[]> => {
-  const data = await fetchFromTMDB<{
-    results: Omit<SearchResult, "media_type">[];
-  }>(`tv/${id}/recommendations`);
-  return data.results.map((item) => ({ ...item, media_type: "tv" }));
+  const data = await fetchWithFallback<{ results: SearchResult[] }>(
+    `/recommendations/tv/${id}`,
+    async () => {
+      const response = await fetchFromTMDB<{ results: Omit<SearchResult, "media_type">[] }>(
+        `tv/${id}/recommendations`
+      );
+      return { results: response.results.map((item) => ({ ...item, media_type: "tv" as const })) };
+    }
+  );
+  return data.results;
 };
 
 export const getMediaImages = async (
   id: number,
   media_type: "movie" | "tv"
 ) => {
-  return fetchFromTMDB<{ logos: LogoImage[] }>(`${media_type}/${id}/images`);
+  return fetchWithFallback<{ logos: LogoImage[] }>(
+    `/images/${media_type}/${id}`,
+    () => fetchFromTMDB<{ logos: LogoImage[] }>(`${media_type}/${id}/images`)
+  );
 };
 
 export const getBestLogo = (logos?: LogoImage[]): LogoImage | null => {

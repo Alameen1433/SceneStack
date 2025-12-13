@@ -9,6 +9,7 @@ A personal movie & TV show tracker with a gorgeous glassmorphic UI. Yes, it's *a
 ![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js)
 ![Express](https://img.shields.io/badge/Express-4-000000?logo=express)
 ![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb)
+![Redis](https://img.shields.io/badge/Redis-Upstash-DC382D?logo=redis)
 ![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite)
 
 > 🎓 **Learning Project** — This is my playground for learning the MERN stack (MongoDB, Express, React, Node.js), TypeScript, and modern web development.
@@ -80,6 +81,7 @@ Set it on your router, device, or browser, and you're good to go. Welcome to the
 - Node.js 18+
 - MongoDB Atlas account (or local MongoDB)
 - TMDB API key ([get one here](https://www.themoviedb.org/settings/api))
+- Redis (optional - [Upstash](https://upstash.com/) free tier works great)
 
 ### Setup
 
@@ -150,12 +152,22 @@ INVITE_CODES=SCENESTACK2024,YOURCODE
 
 # Server port (optional, default: 3001)
 PORT=3001
+
+# TMDB API Read Access Token (required for TMDB proxy)
+TMDB_API_READ_ACCESS_TOKEN=your_tmdb_read_access_token
+
+# Redis URL (optional - caching disabled if not set)
+# Get a free Redis instance at https://upstash.com/
+REDIS_URL=rediss://default:your_password@your-instance.upstash.io:6379
 ```
 
 **Client** (`cinetrack-app/client/.env`):
 ```env
-# TMDB API Read Access Token (required)
+# TMDB API Read Access Token (required - used as fallback if backend proxy fails)
 VITE_TMDB_API_READ_ACCESS_TOKEN=your_tmdb_read_access_token
+
+# API Base URL (leave empty in production)
+VITE_API_BASE_URL=
 ```
 
 ---
@@ -170,6 +182,7 @@ VITE_TMDB_API_READ_ACCESS_TOKEN=your_tmdb_read_access_token
 | Backend | Express.js | Simple, battle-tested, no surprises |
 | Real-time | Socket.IO | So your watchlist syncs faster than you can say "just one more episode" |
 | Database | MongoDB Atlas | JSON in, JSON out. No ORM drama. |
+| Cache | Redis (Upstash) | TMDB responses cached for speed & rate limit protection |
 | Auth | JWT + bcrypt | Stateless sessions, hashed passwords |
 | API | TMDB | The real MVP of this project |
 
