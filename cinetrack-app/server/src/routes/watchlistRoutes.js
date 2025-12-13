@@ -1,6 +1,8 @@
 const express = require("express");
 const { authMiddleware } = require("../middleware/authMiddleware");
 const { asyncHandler, AppError } = require("../middleware/errorHandler");
+const { validate } = require("../middleware/validate");
+const { watchlistItemSchema, watchlistImportSchema } = require("../validation/schemas");
 
 const router = express.Router();
 
@@ -40,11 +42,9 @@ module.exports = (watchlistCollection, broadcastToUser, client) => {
     router.put(
         "/",
         authMiddleware,
+        validate(watchlistItemSchema),
         asyncHandler(async (req, res) => {
             const item = req.body;
-            if (!item || typeof item.id !== "number") {
-                throw new AppError("Invalid item data.", 400);
-            }
 
             const { _id, ...itemWithoutId } = item;
             const itemWithUser = { ...itemWithoutId, userId: req.userId };
@@ -84,11 +84,9 @@ module.exports = (watchlistCollection, broadcastToUser, client) => {
     router.post(
         "/import",
         authMiddleware,
+        validate(watchlistImportSchema),
         asyncHandler(async (req, res) => {
             const items = req.body;
-            if (!Array.isArray(items)) {
-                throw new AppError("Request body must be an array.", 400);
-            }
 
             await watchlistCollection.deleteMany({ userId: req.userId });
 

@@ -3,25 +3,19 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const config = require("../config");
 const { JWT_SECRET, authMiddleware } = require("../middleware/authMiddleware");
+const { validate } = require("../middleware/validate");
+const { registerSchema, loginSchema, changePasswordSchema } = require("../validation/schemas");
+const { ObjectId } = require("mongodb");
 
 const router = express.Router();
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const INVITE_CODES = config.inviteCodes;
 
 module.exports = (usersCollection) => {
     // POST /api/auth/register
-    router.post("/register", async (req, res) => {
+    router.post("/register", validate(registerSchema), async (req, res) => {
         try {
             const { email, password, inviteCode } = req.body;
-
-            if (!email || !password || !inviteCode) {
-                return res.status(400).json({ message: "Email, password, and invite code are required" });
-            }
-
-            if (!EMAIL_REGEX.test(email)) {
-                return res.status(400).json({ message: "Invalid email format" });
-            }
 
             if (!INVITE_CODES.includes(inviteCode)) {
                 return res.status(403).json({ message: "Invalid invite code" });
@@ -56,17 +50,9 @@ module.exports = (usersCollection) => {
     });
 
     // POST /api/auth/login
-    router.post("/login", async (req, res) => {
+    router.post("/login", validate(loginSchema), async (req, res) => {
         try {
             const { email, password } = req.body;
-
-            if (!email || !password) {
-                return res.status(400).json({ message: "Email and password are required" });
-            }
-
-            if (!EMAIL_REGEX.test(email)) {
-                return res.status(400).json({ message: "Invalid email format" });
-            }
 
             const user = await usersCollection.findOne({ email: email.toLowerCase() });
             if (!user) {
@@ -95,7 +81,6 @@ module.exports = (usersCollection) => {
     // GET /api/auth/me - Get current user
     router.get("/me", authMiddleware, async (req, res) => {
         try {
-            const { ObjectId } = require("mongodb");
             const user = await usersCollection.findOne({ _id: new ObjectId(req.userId) });
 
             if (!user) {
@@ -112,18 +97,9 @@ module.exports = (usersCollection) => {
     });
 
     // PUT /api/auth/password - Change password
-    router.put("/password", authMiddleware, async (req, res) => {
+    router.put("/password", authMiddleware, validate(changePasswordSchema), async (req, res) => {
         try {
-            const { ObjectId } = require("mongodb");
             const { currentPassword, newPassword } = req.body;
-
-            if (!currentPassword || !newPassword) {
-                return res.status(400).json({ message: "Current and new password are required" });
-            }
-
-            if (newPassword.length < 6) {
-                return res.status(400).json({ message: "New password must be at least 6 characters" });
-            }
 
             const user = await usersCollection.findOne({ _id: new ObjectId(req.userId) });
             if (!user) {

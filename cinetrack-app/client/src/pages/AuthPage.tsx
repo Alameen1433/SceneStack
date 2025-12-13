@@ -6,9 +6,9 @@ const PasswordInput: React.FC<{
     id: string;
     value: string;
     onChange: (value: string) => void;
-    required?: boolean;
-    minLength?: number;
-}> = ({ id, value, onChange, required, minLength }) => {
+    onBlur?: () => void;
+    hasError?: boolean;
+}> = ({ id, value, onChange, onBlur, hasError }) => {
     const [showPassword, setShowPassword] = useState(false);
 
     return (
@@ -18,9 +18,11 @@ const PasswordInput: React.FC<{
                 type={showPassword ? "text" : "password"}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                required={required}
-                minLength={minLength}
-                className="w-full px-4 py-3 pr-12 bg-black/40 border border-white/5 rounded-lg text-white placeholder:text-brand-text-muted focus:outline-none focus:border-brand-primary/50 focus:ring-1 focus:ring-brand-primary/30 transition-all"
+                onBlur={onBlur}
+                className={`w-full px-4 py-3 pr-12 bg-black/40 border rounded-lg text-white placeholder:text-brand-text-muted focus:outline-none focus:ring-1 transition-all ${hasError
+                        ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/30"
+                        : "border-white/5 focus:border-brand-primary/50 focus:ring-brand-primary/30"
+                    }`}
             />
             <button
                 type="button"
@@ -47,11 +49,79 @@ export const AuthPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
+    const [fieldErrors, setFieldErrors] = useState<{
+        email?: string;
+        password?: string;
+        inviteCode?: string;
+    }>({});
+    const [touched, setTouched] = useState<{
+        email?: boolean;
+        password?: boolean;
+        inviteCode?: boolean;
+    }>({});
+
     const { login, register, error, clearError } = useAuthContext();
+
+    const validateEmail = (value: string): string | undefined => {
+        if (!value) return "Email is required";
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Invalid email format";
+        return undefined;
+    };
+
+    const validatePassword = (value: string): string | undefined => {
+        if (!value) return "Password is required";
+        if (value.length < 6) return "Password must be at least 6 characters";
+        return undefined;
+    };
+
+    const validateInviteCode = (value: string): string | undefined => {
+        if (mode === "register" && !value) return "Invite code is required";
+        return undefined;
+    };
+
+    const handleEmailChange = (value: string) => {
+        setEmail(value);
+        if (touched.email) {
+            setFieldErrors(prev => ({ ...prev, email: validateEmail(value) }));
+        }
+    };
+
+    const handlePasswordChange = (value: string) => {
+        setPassword(value);
+        if (touched.password) {
+            setFieldErrors(prev => ({ ...prev, password: validatePassword(value) }));
+        }
+    };
+
+    const handleInviteCodeChange = (value: string) => {
+        setInviteCode(value);
+        if (touched.inviteCode) {
+            setFieldErrors(prev => ({ ...prev, inviteCode: validateInviteCode(value) }));
+        }
+    };
+
+    const handleBlur = (field: "email" | "password" | "inviteCode") => {
+        setTouched(prev => ({ ...prev, [field]: true }));
+        if (field === "email") setFieldErrors(prev => ({ ...prev, email: validateEmail(email) }));
+        if (field === "password") setFieldErrors(prev => ({ ...prev, password: validatePassword(password) }));
+        if (field === "inviteCode") setFieldErrors(prev => ({ ...prev, inviteCode: validateInviteCode(inviteCode) }));
+    };
 
     const handleSubmit = useCallback(
         async (e: React.FormEvent) => {
             e.preventDefault();
+
+            const emailError = validateEmail(email);
+            const passwordError = validatePassword(password);
+            const inviteCodeError = mode === "register" ? validateInviteCode(inviteCode) : undefined;
+
+            setFieldErrors({ email: emailError, password: passwordError, inviteCode: inviteCodeError });
+            setTouched({ email: true, password: true, inviteCode: true });
+
+            if (emailError || passwordError || (mode === "register" && inviteCodeError)) {
+                return;
+            }
+
             setIsSubmitting(true);
             clearError();
 
@@ -69,6 +139,8 @@ export const AuthPage: React.FC = () => {
     const toggleMode = () => {
         setMode(mode === "login" ? "register" : "login");
         clearError();
+        setFieldErrors({});
+        setTouched({});
     };
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -149,10 +221,16 @@ export const AuthPage: React.FC = () => {
                                 id="email"
                                 type="email"
                                 value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                                className="w-full px-4 py-3 bg-black/40 border border-white/5 rounded-lg text-white placeholder:text-brand-text-muted focus:outline-none focus:border-brand-primary/50 focus:ring-1 focus:ring-brand-primary/30 transition-all"
+                                onChange={(e) => handleEmailChange(e.target.value)}
+                                onBlur={() => handleBlur("email")}
+                                className={`w-full px-4 py-3 bg-black/40 border rounded-lg text-white placeholder:text-brand-text-muted focus:outline-none focus:ring-1 transition-all ${fieldErrors.email && touched.email
+                                    ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/30"
+                                    : "border-white/5 focus:border-brand-primary/50 focus:ring-brand-primary/30"
+                                    }`}
                             />
+                            {fieldErrors.email && touched.email && (
+                                <p className="text-red-400 text-xs mt-1">{fieldErrors.email}</p>
+                            )}
                         </div>
 
                         <div>
@@ -162,10 +240,13 @@ export const AuthPage: React.FC = () => {
                             <PasswordInput
                                 id="password"
                                 value={password}
-                                onChange={setPassword}
-                                required
-                                minLength={6}
+                                onChange={handlePasswordChange}
+                                onBlur={() => handleBlur("password")}
+                                hasError={!!(fieldErrors.password && touched.password)}
                             />
+                            {fieldErrors.password && touched.password && (
+                                <p className="text-red-400 text-xs mt-1">{fieldErrors.password}</p>
+                            )}
                         </div>
 
                         {mode === "register" && (
@@ -177,10 +258,16 @@ export const AuthPage: React.FC = () => {
                                     id="inviteCode"
                                     type="text"
                                     value={inviteCode}
-                                    onChange={(e) => setInviteCode(e.target.value)}
-                                    required={mode === "register"}
-                                    className="w-full px-4 py-3 bg-black/40 border border-white/5 rounded-lg text-white placeholder:text-brand-text-muted focus:outline-none focus:border-brand-primary/50 focus:ring-1 focus:ring-brand-primary/30 transition-all"
+                                    onChange={(e) => handleInviteCodeChange(e.target.value)}
+                                    onBlur={() => handleBlur("inviteCode")}
+                                    className={`w-full px-4 py-3 bg-black/40 border rounded-lg text-white placeholder:text-brand-text-muted focus:outline-none focus:ring-1 transition-all ${fieldErrors.inviteCode && touched.inviteCode
+                                        ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/30"
+                                        : "border-white/5 focus:border-brand-primary/50 focus:ring-brand-primary/30"
+                                        }`}
                                 />
+                                {fieldErrors.inviteCode && touched.inviteCode && (
+                                    <p className="text-red-400 text-xs mt-1">{fieldErrors.inviteCode}</p>
+                                )}
                             </div>
                         )}
 

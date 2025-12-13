@@ -7,6 +7,9 @@ const { MongoClient, ServerApiVersion } = require("mongodb");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
 const path = require("path");
+const helmet = require("helmet");
+const compression = require("compression");
+const morgan = require("morgan");
 
 const { authMiddleware, JWT_SECRET } = require("./middleware/authMiddleware");
 const { errorHandler } = require("./middleware/errorHandler");
@@ -63,6 +66,9 @@ const authLimiter = rateLimit({
 });
 
 // --- Middleware ---
+app.use(helmet());
+app.use(compression());
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(
   cors({
     origin: true,
@@ -134,36 +140,7 @@ app.use("/api/watchlist", (req, res, next) => {
   watchlistRoutes(watchlistCollection, broadcastToUser, client)(req, res, next);
 });
 
-// GET /api/stats (keep here since it's under /api not /api/watchlist)
-app.get("/api/stats", authMiddleware, async (req, res, next) => {
-  try {
-    const userItemCount = await watchlistCollection.countDocuments({ userId: req.userId });
-    const totalDocuments = await watchlistCollection.countDocuments();
-    const db = client.db("scenestackDB");
 
-    let dbStats = null;
-    try {
-      dbStats = await db.stats();
-    } catch (statsErr) {
-      console.log("Could not get database stats:", statsErr.message);
-    }
-
-    res.json({
-      user: { itemCount: userItemCount },
-      collection: {
-        totalDocuments,
-        storageSize: dbStats?.storageSize || 0,
-        avgObjSize: dbStats?.avgObjSize || 0,
-      },
-      database: {
-        name: dbStats?.db || "scenestackDB",
-        dataSize: dbStats?.dataSize || 0,
-      },
-    });
-  } catch (err) {
-    next(err);
-  }
-});
 
 // --- Catch-all for SPA ---
 app.get("*", (req, res) => {
