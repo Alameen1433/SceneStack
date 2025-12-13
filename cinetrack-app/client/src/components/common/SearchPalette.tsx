@@ -117,7 +117,6 @@ export const SearchPalette: React.FC<SearchPaletteProps> = ({
                                     type="text"
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
-                                    placeholder="Search for movies, TV shows, actors..."
                                     className="flex-1 px-3 py-4 bg-transparent text-white text-lg placeholder-brand-text-dim focus:outline-none"
                                 />
                                 {isLoading ? (
