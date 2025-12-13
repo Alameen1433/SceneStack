@@ -10,7 +10,8 @@ import {
   FiBell,
   FiGithub,
   FiLogOut,
-  FiChevronLeft
+  FiLock,
+  FiUnlock
 } from "react-icons/fi";
 
 interface NavItemProps {
@@ -70,6 +71,9 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
 }) => {
   const { user, logout } = useAuthContext();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
+  const isExpanded = !isCollapsed || isHovered;
 
   const navItems = [
     {
@@ -97,22 +101,29 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
   return (
     <>
       <aside
-        className={`hidden lg:flex flex-col fixed left-0 top-0 h-screen bg-brand-bg/95 backdrop-blur-xl border-r border-white/5 transition-all duration-300 ease-out z-40 ${isCollapsed ? "w-16" : "w-56"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className={`hidden lg:flex flex-col fixed left-0 top-0 h-screen bg-brand-bg/95 backdrop-blur-xl border-r border-white/5 transition-all duration-300 ease-out z-40 ${!isExpanded ? "w-16" : "w-56"
           }`}
       >
         {/* Header with logo and collapse toggle */}
         <div className="flex items-center justify-between p-4 border-b border-white/5">
-          {!isCollapsed && (
+          {isExpanded && (
             <h1 className="font-display text-2xl tracking-wide text-white">
               SCENE<span className="text-brand-primary">STACK</span>
             </h1>
           )}
           <button
             onClick={onToggleCollapse}
-            className={`p-2 rounded-lg text-brand-text-dim hover:bg-white/5 hover:text-white transition-all ${isCollapsed ? "mx-auto" : ""}`}
-            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className={`p-2 rounded-lg text-brand-text-dim hover:bg-white/5 hover:text-white transition-all ${!isExpanded ? "mx-auto" : ""}`}
+            aria-label={isCollapsed ? "Lock sidebar" : "Unlock sidebar"}
+            title={isCollapsed ? "Lock Sidebar" : "Unlock Sidebar"}
           >
-            <FiChevronLeft className={`w-4 h-4 transition-transform duration-300 ${isCollapsed ? "rotate-180" : ""}`} />
+            {isCollapsed ? (
+              <FiUnlock className="w-4 h-4" />
+            ) : (
+              <FiLock className="w-4 h-4 text-brand-primary" />
+            )}
           </button>
         </div>
 
@@ -125,7 +136,7 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                 label={item.label}
                 icon={item.icon}
                 isActive={activeTab === item.id}
-                isCollapsed={isCollapsed}
+                isCollapsed={!isExpanded}
                 onClick={() => onTabChange(item.id as "discover" | "lists" | "recommendations" | "stats")}
               />
             ))}
@@ -136,30 +147,30 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
         <div className="p-3 border-t border-white/5">
           <button
             onClick={onOpenSettings}
-            title={isCollapsed ? "Settings" : undefined}
+            title={!isExpanded ? "Settings" : undefined}
             className="flex items-center w-full px-3 py-2.5 rounded-xl text-brand-text-dim hover:bg-white/5 hover:text-white transition-all"
           >
             <FiSettings className="w-5 h-5" />
-            {!isCollapsed && <span className="ml-3 text-sm font-medium">Settings</span>}
+            {isExpanded && <span className="ml-3 text-sm font-medium">Settings</span>}
           </button>
           <button
-            title={isCollapsed ? "Notifications" : undefined}
+            title={!isExpanded ? "Notifications" : undefined}
             className="flex items-center w-full px-3 py-2.5 rounded-xl text-brand-text-dim hover:bg-white/5 hover:text-white transition-all relative"
           >
             <FiBell className="w-5 h-5" />
-            {!isCollapsed && <span className="ml-3 text-sm font-medium">Notifications</span>}
+            {isExpanded && <span className="ml-3 text-sm font-medium">Notifications</span>}
             {/* Badge */}
-            <span className={`absolute ${isCollapsed ? "top-2 right-2" : "top-2.5 left-6"} w-2 h-2 bg-brand-primary rounded-full`} />
+            <span className={`absolute ${!isExpanded ? "top-2 right-2" : "top-2.5 left-6"} w-2 h-2 bg-brand-primary rounded-full`} />
           </button>
           <a
             href="https://github.com/Alameen1433"
             target="_blank"
             rel="noopener noreferrer"
-            title={isCollapsed ? "GitHub" : undefined}
+            title={!isExpanded ? "GitHub" : undefined}
             className="flex items-center w-full px-3 py-2.5 rounded-xl text-brand-text-dim hover:bg-white/5 hover:text-white transition-all"
           >
             <FiGithub className="w-5 h-5" />
-            {!isCollapsed && <span className="ml-3 text-sm font-medium">GitHub</span>}
+            {isExpanded && <span className="ml-3 text-sm font-medium">GitHub</span>}
           </a>
         </div>
 
@@ -169,7 +180,7 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
               {user?.email?.charAt(0).toUpperCase() || "U"}
             </div>
-            {!isCollapsed && (
+            {isExpanded && (
               <>
                 <div className="flex-1 min-w-0 ml-2">
                   <p className="text-xs font-medium text-white truncate">{user?.email}</p>

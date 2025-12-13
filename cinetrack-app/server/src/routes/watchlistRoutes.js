@@ -20,6 +20,37 @@ module.exports = (watchlistCollection, broadcastToUser, client) => {
         })
     );
 
+    // GET /api/stats
+    router.get(
+        "/stats",
+        authMiddleware,
+        asyncHandler(async (req, res) => {
+            const userItemCount = await watchlistCollection.countDocuments({ userId: req.userId });
+            const totalDocuments = await watchlistCollection.countDocuments();
+            const db = client.db("scenestackDB");
+
+            let dbStats = null;
+            try {
+                dbStats = await db.stats();
+            } catch (statsErr) {
+                console.log("Could not get database stats:", statsErr.message);
+            }
+
+            res.json({
+                user: { itemCount: userItemCount },
+                collection: {
+                    totalDocuments,
+                    storageSize: dbStats?.storageSize || 0,
+                    avgObjSize: dbStats?.avgObjSize || 0,
+                },
+                database: {
+                    name: dbStats?.db || "scenestackDB",
+                    dataSize: dbStats?.dataSize || 0,
+                },
+            });
+        })
+    );
+
     // GET /api/watchlist/:id
     router.get(
         "/:id",
@@ -100,36 +131,7 @@ module.exports = (watchlistCollection, broadcastToUser, client) => {
         })
     );
 
-    // GET /api/stats
-    router.get(
-        "/stats",
-        authMiddleware,
-        asyncHandler(async (req, res) => {
-            const userItemCount = await watchlistCollection.countDocuments({ userId: req.userId });
-            const totalDocuments = await watchlistCollection.countDocuments();
-            const db = client.db("scenestackDB");
 
-            let dbStats = null;
-            try {
-                dbStats = await db.stats();
-            } catch (statsErr) {
-                console.log("Could not get database stats:", statsErr.message);
-            }
-
-            res.json({
-                user: { itemCount: userItemCount },
-                collection: {
-                    totalDocuments,
-                    storageSize: dbStats?.storageSize || 0,
-                    avgObjSize: dbStats?.avgObjSize || 0,
-                },
-                database: {
-                    name: dbStats?.db || "scenestackDB",
-                    dataSize: dbStats?.dataSize || 0,
-                },
-            });
-        })
-    );
 
     return router;
 };

@@ -26,7 +26,6 @@ export const SearchPalette: React.FC<SearchPaletteProps> = ({
                 e.preventDefault();
                 setIsOpen(true);
             }
-            // Close with Escape
             if (e.key === "Escape" && isOpen) {
                 handleClose();
             }
@@ -80,7 +79,7 @@ export const SearchPalette: React.FC<SearchPaletteProps> = ({
                 >
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                <span className="flex-1 text-left text-sm">Search movies & shows...</span>
+                <span className="flex-1 text-left text-sm"></span>
                 <kbd className="hidden sm:flex items-center gap-1 px-2 py-1 text-xs font-medium bg-white/10 rounded-md text-brand-text-dim">
                     {shortcutKey} K
                 </kbd>

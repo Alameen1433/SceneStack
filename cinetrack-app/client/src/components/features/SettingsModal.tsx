@@ -73,7 +73,7 @@ const StorageStats: React.FC = () => {
     const fetchStats = async () => {
       try {
         const token = getAuthToken();
-        const response = await fetch('/api/stats', {
+        const response = await fetch('/api/watchlist/stats', {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!response.ok) throw new Error('Failed to fetch stats');
