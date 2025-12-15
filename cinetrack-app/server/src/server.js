@@ -67,7 +67,20 @@ const authLimiter = rateLimit({
 });
 
 // --- Middleware ---
-app.use(helmet());
+app.set("trust proxy", 1);
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        connectSrc: ["'self'", "https://api.themoviedb.org", "wss:", "ws:"],
+        imgSrc: ["'self'", "https://image.tmdb.org", "data:", "blob:"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+      },
+    },
+  })
+);
 app.use(compression());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(
