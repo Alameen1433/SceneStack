@@ -60,6 +60,7 @@ interface SideNavBarProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   onOpenSettings: () => void;
+  onOpenNotifications: () => void;
 }
 
 export const SideNavBar: React.FC<SideNavBarProps> = ({
@@ -68,6 +69,7 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
   isCollapsed,
   onToggleCollapse,
   onOpenSettings,
+  onOpenNotifications,
 }) => {
   const { user, logout } = useAuthContext();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -154,12 +156,12 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
             {isExpanded && <span className="ml-3 text-sm font-medium">Settings</span>}
           </button>
           <button
+            onClick={onOpenNotifications}
             title={!isExpanded ? "Notifications" : undefined}
             className="flex items-center w-full px-3 py-2.5 rounded-xl text-brand-text-dim hover:bg-white/5 hover:text-white transition-all relative"
           >
             <FiBell className="w-5 h-5" />
             {isExpanded && <span className="ml-3 text-sm font-medium">Notifications</span>}
-            {/* Badge */}
             <span className={`absolute ${!isExpanded ? "top-2 right-2" : "top-2.5 left-6"} w-2 h-2 bg-brand-primary rounded-full`} />
           </button>
           <a

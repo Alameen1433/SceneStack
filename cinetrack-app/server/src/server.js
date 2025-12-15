@@ -76,7 +76,8 @@ app.use(
         connectSrc: ["'self'", "https://api.themoviedb.org", "wss:", "ws:"],
         imgSrc: ["'self'", "https://image.tmdb.org", "data:", "blob:"],
         scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
       },
     },
   })

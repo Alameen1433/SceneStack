@@ -8,6 +8,7 @@ import { DiscoverProvider } from "./contexts/DiscoverContext";
 import { AuthProvider, useAuthContext } from "./contexts/AuthContext";
 import { SearchBar } from "./components/common/SearchBar";
 import { SearchPalette } from "./components/common/SearchPalette";
+import { NotificationsModal } from "./components/common/NotificationsModal";
 import { LoadingPosterAnimation } from "./components/common/LoadingPosterAnimation";
 import { BottomNavBar } from "./components/layout/BottomNavBar";
 import { SideNavBar } from "./components/layout/SideNavBar";
@@ -43,7 +44,7 @@ const ModalLoadingFallback: React.FC = () => (
 
 // Header component
 const Header: React.FC = memo(() => {
-  const { handleSearch, isSearchLoading, isSearchExpanded, setIsSearchExpanded, openSettings } = useUIContext();
+  const { handleSearch, isSearchLoading, isSearchExpanded, setIsSearchExpanded, openSettings, openNotifications } = useUIContext();
 
   return (
     <header className="sticky top-0 z-20 bg-brand-bg/80 backdrop-blur-lg">
@@ -68,11 +69,11 @@ const Header: React.FC = memo(() => {
               <FiGithub className="h-6 w-6" />
             </a>
             <button
+              onClick={openNotifications}
               className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light hover:bg-brand-surface transition-colors flex-shrink-0 relative"
               aria-label="Notifications"
             >
               <FiBell className="h-6 w-6" />
-              {/* Notification badge placeholder */}
               <span className="absolute top-1 right-1 w-2 h-2 bg-brand-primary rounded-full" />
             </button>
             <button
@@ -131,6 +132,7 @@ const Header: React.FC = memo(() => {
                   <FiGithub className="h-6 w-6" />
                 </a>
                 <button
+                  onClick={openNotifications}
                   className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light relative"
                   aria-label="Notifications"
                 >
@@ -238,6 +240,8 @@ const Modals: React.FC = () => {
     handleCloseModal,
     isSettingsOpen,
     closeSettings,
+    isNotificationsOpen,
+    closeNotifications,
     handleSearch,
   } = useUIContext();
   const watchlist = useWatchlistStore(state => state.watchlist);
@@ -293,13 +297,18 @@ const Modals: React.FC = () => {
           onImport={handleImportWatchlist}
         />
       </Suspense>
+
+      <NotificationsModal
+        isOpen={isNotificationsOpen}
+        onClose={closeNotifications}
+      />
     </>
   );
 };
 
 // App layout component
 const AppLayout: React.FC = () => {
-  const { activeTab, setActiveTab, searchResults, openSettings, viewAllSection, closeViewAll, handleSearch } = useUIContext();
+  const { activeTab, setActiveTab, searchResults, openSettings, openNotifications, viewAllSection, closeViewAll, handleSearch } = useUIContext();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useLocalStorage("sidebarCollapsed", false);
 
   // Handle tab change - clear search results if any
@@ -338,6 +347,7 @@ const AppLayout: React.FC = () => {
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
         onOpenSettings={openSettings}
+        onOpenNotifications={openNotifications}
       />
 
       <div

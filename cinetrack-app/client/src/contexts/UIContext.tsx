@@ -30,6 +30,10 @@ interface UIContextType {
     openSettings: () => void;
     closeSettings: () => void;
 
+    isNotificationsOpen: boolean;
+    openNotifications: () => void;
+    closeNotifications: () => void;
+
     viewAllSection: { title: string; items: Media[] } | null;
     openViewAll: (title: string, items: Media[]) => void;
     closeViewAll: () => void;
@@ -51,6 +55,7 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [detailedMedia, setDetailedMedia] = useState<MovieDetail | TVDetail | null>(null);
     const [animatingMedia, setAnimatingMedia] = useState<{ media: Media; rect: DOMRect } | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const [viewAllSection, setViewAllSection] = useState<{ title: string; items: Media[] } | null>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -182,6 +187,14 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         window.history.back();
     }, []);
 
+    const openNotifications = useCallback(() => {
+        setIsNotificationsOpen(true);
+    }, []);
+
+    const closeNotifications = useCallback(() => {
+        setIsNotificationsOpen(false);
+    }, []);
+
     const openViewAll = useCallback((title: string, items: Media[]) => {
         const sectionSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
         window.history.pushState({ viewAll: sectionSlug }, "", `#viewall/${sectionSlug}`);
@@ -209,6 +222,9 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
             isSettingsOpen,
             openSettings,
             closeSettings,
+            isNotificationsOpen,
+            openNotifications,
+            closeNotifications,
             viewAllSection,
             openViewAll,
             closeViewAll,
@@ -229,6 +245,9 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
             isSettingsOpen,
             openSettings,
             closeSettings,
+            isNotificationsOpen,
+            openNotifications,
+            closeNotifications,
             viewAllSection,
             openViewAll,
             closeViewAll,
