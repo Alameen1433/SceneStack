@@ -44,7 +44,7 @@ const ModalLoadingFallback: React.FC = () => (
 
 // Header component
 const Header: React.FC = memo(() => {
-  const { handleSearch, isSearchLoading, isSearchExpanded, setIsSearchExpanded, openSettings, openNotifications } = useUIContext();
+  const { handleSearch, isSearchLoading, isSearchExpanded, setIsSearchExpanded, openSettings, openNotifications, unreadNotifications } = useUIContext();
 
   return (
     <header className="sticky top-0 z-20 bg-brand-bg/80 backdrop-blur-lg">
@@ -74,7 +74,9 @@ const Header: React.FC = memo(() => {
               aria-label="Notifications"
             >
               <FiBell className="h-6 w-6" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-brand-primary rounded-full" />
+              {unreadNotifications > 0 && (
+                <span className="absolute top-1 right-1 w-2 h-2 bg-brand-primary rounded-full" />
+              )}
             </button>
             <button
               onClick={openSettings}
@@ -137,7 +139,9 @@ const Header: React.FC = memo(() => {
                   aria-label="Notifications"
                 >
                   <FiBell className="h-6 w-6" />
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-brand-primary rounded-full" />
+                  {unreadNotifications > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-brand-primary rounded-full" />
+                  )}
                 </button>
                 <button
                   onClick={openSettings}
@@ -308,7 +312,7 @@ const Modals: React.FC = () => {
 
 // App layout component
 const AppLayout: React.FC = () => {
-  const { activeTab, setActiveTab, searchResults, openSettings, openNotifications, viewAllSection, closeViewAll, handleSearch } = useUIContext();
+  const { activeTab, setActiveTab, searchResults, openSettings, openNotifications, unreadNotifications, viewAllSection, closeViewAll, handleSearch } = useUIContext();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useLocalStorage("sidebarCollapsed", false);
 
   // Handle tab change - clear search results if any
@@ -348,6 +352,7 @@ const AppLayout: React.FC = () => {
         onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
         onOpenSettings={openSettings}
         onOpenNotifications={openNotifications}
+        unreadNotifications={unreadNotifications}
       />
 
       <div

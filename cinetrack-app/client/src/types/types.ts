@@ -64,7 +64,14 @@ export interface TVDetail extends BaseMedia {
   first_air_date: string;
   last_air_date: string;
   status: string;
-  episode_run_time?: number[]; // Average runtime per episode from TMDB
+  episode_run_time?: number[];
+  next_episode_to_air?: {
+    air_date: string;
+    episode_number: number;
+    season_number: number;
+    name: string;
+    id: number;
+  } | null;
   seasons: {
     air_date: string;
     episode_count: number;

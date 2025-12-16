@@ -3,6 +3,7 @@ import { useWatchlistStore, getWatchlistIds } from "../store/useWatchlistStore";
 import { useUIContext } from "../contexts/UIContext";
 import { MediaGrid } from "../components/media/MediaGrid";
 import { MediaGridSkeleton } from "../components/common/MediaCardSkeleton";
+import { UpcomingEpisodes } from "../components/features/UpcomingEpisodes";
 
 export const RecommendationsPage: React.FC = memo(() => {
     const watchlist = useWatchlistStore(state => state.watchlist);
@@ -21,6 +22,8 @@ export const RecommendationsPage: React.FC = memo(() => {
 
     return (
         <div>
+            <UpcomingEpisodes />
+
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-3xl font-bold text-brand-text-light">For You</h2>
                 <button

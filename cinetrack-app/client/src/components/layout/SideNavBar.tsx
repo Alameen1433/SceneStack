@@ -61,6 +61,7 @@ interface SideNavBarProps {
   onToggleCollapse: () => void;
   onOpenSettings: () => void;
   onOpenNotifications: () => void;
+  unreadNotifications?: number;
 }
 
 export const SideNavBar: React.FC<SideNavBarProps> = ({
@@ -70,6 +71,7 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
   onToggleCollapse,
   onOpenSettings,
   onOpenNotifications,
+  unreadNotifications = 0,
 }) => {
   const { user, logout } = useAuthContext();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -162,7 +164,9 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
           >
             <FiBell className="w-5 h-5" />
             {isExpanded && <span className="ml-3 text-sm font-medium">Notifications</span>}
-            <span className={`absolute ${!isExpanded ? "top-2 right-2" : "top-2.5 left-6"} w-2 h-2 bg-brand-primary rounded-full`} />
+            {unreadNotifications > 0 && (
+              <span className={`absolute ${!isExpanded ? "top-2 right-2" : "top-2.5 left-6"} w-2 h-2 bg-brand-primary rounded-full`} />
+            )}
           </button>
           <a
             href="https://github.com/Alameen1433"
