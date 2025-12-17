@@ -1,6 +1,7 @@
 const config = require("./config");
 const express = require("express");
 const http = require("http");
+const fs = require("fs");
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion } = require("mongodb");
@@ -101,7 +102,17 @@ app.use("/api", (req, res, next) => {
   next();
 });
 
-app.use(express.static(path.join(__dirname, "../../client/dist")));
+app.use(express.static(path.join(__dirname, "../../client/dist"), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith(".js")) {
+      res.setHeader("Content-Type", "application/javascript");
+    } else if (filePath.endsWith(".css")) {
+      res.setHeader("Content-Type", "text/css");
+    } else if (filePath.endsWith(".html")) {
+      res.setHeader("Content-Type", "text/html");
+    }
+  }
+}));
 
 // --- MongoDB Connection ---
 const client = new MongoClient(config.mongo.uri, {
@@ -206,7 +217,10 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 // --- Catch-all for SPA ---
-app.get("*", (req, res) => {
+app.get("*", (req, res, next) => {
+  if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|map)$/)) {
+    return next();
+  }
   res.sendFile(path.join(__dirname, "../../client/dist/index.html"));
 });
 
@@ -214,6 +228,14 @@ app.get("*", (req, res) => {
 app.use(errorHandler);
 
 connectToDb().then(() => {
+  const distPath = path.join(__dirname, "../../client/dist");
+  if (!fs.existsSync(distPath)) {
+    console.error(`[WARN] Client dist folder not found at: ${distPath}`);
+  } else {
+    const files = fs.readdirSync(distPath);
+    console.log(`[Static] Serving ${files.length} files from client/dist`);
+  }
+
   server.listen(port, () => {
     console.log(`Scene Stack server running on port ${port}`);
     console.log(`Socket.IO enabled for real-time sync`);
