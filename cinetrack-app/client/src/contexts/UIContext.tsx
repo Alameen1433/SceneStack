@@ -33,8 +33,6 @@ interface UIContextType {
     isNotificationsOpen: boolean;
     openNotifications: () => void;
     closeNotifications: () => void;
-    unreadNotifications: number;
-    setUnreadNotifications: (count: number) => void;
 
     viewAllSection: { title: string; items: Media[] } | null;
     openViewAll: (title: string, items: Media[]) => void;
@@ -58,7 +56,6 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [animatingMedia, setAnimatingMedia] = useState<{ media: Media; rect: DOMRect } | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-    const [unreadNotifications, setUnreadNotifications] = useState(0);
     const [viewAllSection, setViewAllSection] = useState<{ title: string; items: Media[] } | null>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -228,8 +225,6 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
             isNotificationsOpen,
             openNotifications,
             closeNotifications,
-            unreadNotifications,
-            setUnreadNotifications,
             viewAllSection,
             openViewAll,
             closeViewAll,
@@ -253,7 +248,6 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
             isNotificationsOpen,
             openNotifications,
             closeNotifications,
-            unreadNotifications,
             viewAllSection,
             openViewAll,
             closeViewAll,

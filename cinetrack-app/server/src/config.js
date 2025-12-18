@@ -72,6 +72,8 @@ const cache = {
         try {
             await redis.setex(key, ttlSeconds, JSON.stringify(data));
             await redis.zadd(indexKey, Date.now(), key);
+
+            // Set index TTL to 2x item TTL (auto-cleanup of orphan references)
             await redis.expire(indexKey, ttlSeconds * 2);
 
             const count = await redis.zcard(indexKey);
@@ -88,106 +90,6 @@ const cache = {
     },
 };
 
-const scheduler = {
-    isConnected: () => redisConnected && redis !== null,
-
-    async scheduleEpisode(showId, airDate, metadata) {
-        if (!this.isConnected()) return false;
-        try {
-            const timestamp = Math.floor(new Date(airDate).getTime() / 1000);
-            const pipe = redis.pipeline();
-            pipe.zadd("schedule:episodes", timestamp, `show:${showId}`);
-            pipe.hset(`meta:show:${showId}`, {
-                name: metadata.name || "",
-                nextEp: metadata.nextEp || "",
-            });
-            await pipe.exec();
-            return true;
-        } catch (err) {
-            console.error("Scheduler scheduleEpisode error:", err.message);
-            return false;
-        }
-    },
-
-    async addToTBA(showId) {
-        if (!this.isConnected()) return false;
-        try {
-            await redis.sadd("schedule:tba", showId.toString());
-            return true;
-        } catch (err) {
-            console.error("Scheduler addToTBA error:", err.message);
-            return false;
-        }
-    },
-
-    async getDueShows() {
-        if (!this.isConnected()) return [];
-        try {
-            const now = Math.floor(Date.now() / 1000);
-            return await redis.zrangebyscore("schedule:episodes", 0, now);
-        } catch (err) {
-            console.error("Scheduler getDueShows error:", err.message);
-            return [];
-        }
-    },
-
-    async getAllScheduled() {
-        if (!this.isConnected()) return [];
-        try {
-            const results = await redis.zrange("schedule:episodes", 0, -1, "WITHSCORES");
-            const shows = [];
-            for (let i = 0; i < results.length; i += 2) {
-                shows.push({
-                    showId: results[i],
-                    airDate: new Date(parseInt(results[i + 1]) * 1000).toISOString(),
-                });
-            }
-            return shows;
-        } catch (err) {
-            console.error("Scheduler getAllScheduled error:", err.message);
-            return [];
-        }
-    },
-
-    async getShowMeta(showId) {
-        if (!this.isConnected()) return null;
-        try {
-            return await redis.hgetall(`meta:show:${showId}`);
-        } catch (err) {
-            console.error("Scheduler getShowMeta error:", err.message);
-            return null;
-        }
-    },
-
-    async removeFromSchedule(member) {
-        if (!this.isConnected()) return;
-        try {
-            await redis.zrem("schedule:episodes", member);
-        } catch (err) {
-            console.error("Scheduler removeFromSchedule error:", err.message);
-        }
-    },
-
-    async getTBAShows() {
-        if (!this.isConnected()) return [];
-        try {
-            return await redis.smembers("schedule:tba");
-        } catch (err) {
-            console.error("Scheduler getTBAShows error:", err.message);
-            return [];
-        }
-    },
-
-    async removeFromTBA(showId) {
-        if (!this.isConnected()) return;
-        try {
-            await redis.srem("schedule:tba", showId.toString());
-        } catch (err) {
-            console.error("Scheduler removeFromTBA error:", err.message);
-        }
-    },
-};
-
 module.exports = {
     mongo: {
         uri: process.env.MONGO_URI,
@@ -198,5 +100,4 @@ module.exports = {
     inviteCodes: process.env.INVITE_CODES.split(",").map((c) => c.trim()).filter(Boolean),
     port: parseInt(process.env.PORT, 10) || 3001,
     cache,
-    scheduler,
 };

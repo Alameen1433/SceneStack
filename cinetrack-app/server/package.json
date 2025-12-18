@@ -19,7 +19,6 @@
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^6.8.0",
     "morgan": "^1.10.1",
-    "node-cron": "^4.2.1",
     "socket.io": "^4.8.1",
     "zod": "^4.1.13"
   },

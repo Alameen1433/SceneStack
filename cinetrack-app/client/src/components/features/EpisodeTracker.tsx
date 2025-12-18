@@ -59,8 +59,8 @@ export const EpisodeTracker: React.FC<{
         1;
       setSelectedSeason(initialSeason);
       fetchSeasonData(initialSeason);
-      prevWatchedRef.current = watchedEpisodes;
-    }, [tvShow.id, tvShow.seasons]);
+      prevWatchedRef.current = watchedEpisodes; 
+    }, [tvShow.id, tvShow.seasons]); 
 
     useEffect(() => {
       if (!seasonData || !seasonData.episodes.length) {
@@ -85,8 +85,8 @@ export const EpisodeTracker: React.FC<{
     const handleSeasonChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
       const newSeason = Number(e.target.value);
       setSelectedSeason(newSeason);
-      setSeasonData(null);
-      setExpandedOverviews(new Set());
+      setSeasonData(null); 
+      setExpandedOverviews(new Set()); 
       fetchSeasonData(newSeason);
     };
 
@@ -102,20 +102,12 @@ export const EpisodeTracker: React.FC<{
       });
     };
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const releasedEpisodes = seasonData?.episodes.filter((e) => {
-      if (!e.air_date) return false;
-      const airDate = new Date(e.air_date);
-      return airDate <= today;
-    }) ?? [];
-
-    const allReleasedEpisodeNumbers = releasedEpisodes.map((e) => e.episode_number);
+    const allEpisodesInSeason =
+      seasonData?.episodes.map((e) => e.episode_number) ?? [];
     const watchedInSeason = watchedEpisodes[selectedSeason] ?? [];
     const isSeasonWatched =
-      allReleasedEpisodeNumbers.length > 0 &&
-      watchedInSeason.length >= allReleasedEpisodeNumbers.length;
+      allEpisodesInSeason.length > 0 &&
+      watchedInSeason.length === allEpisodesInSeason.length;
 
     return (
       <div className="relative flex flex-col h-full">
@@ -146,7 +138,7 @@ export const EpisodeTracker: React.FC<{
                 onToggleSeasonWatched(
                   tvShow.id,
                   selectedSeason,
-                  allReleasedEpisodeNumbers
+                  allEpisodesInSeason
                 )
               }
               className="flex-shrink-0 py-2 px-3 text-xs font-semibold rounded-md transition-colors bg-white/10 hover:bg-white/20 text-white"
@@ -170,8 +162,6 @@ export const EpisodeTracker: React.FC<{
         {!isLoading && seasonData && (
           <ul className="space-y-3 overflow-y-auto flex-grow pr-2">
             {seasonData.episodes.map((episode) => {
-              const episodeAirDate = episode.air_date ? new Date(episode.air_date) : null;
-              const isReleased = episodeAirDate ? episodeAirDate <= today : false;
               const airDate = episode.air_date
                 ? new Date(episode.air_date).toLocaleDateString("en-US", {
                   year: "numeric",
@@ -186,34 +176,38 @@ export const EpisodeTracker: React.FC<{
               return (
                 <li
                   key={episode.id}
-                  className={`flex items-start gap-3 p-3 rounded-xl transition-colors ${isReleased
-                      ? "hover:bg-white/10 active:bg-white/15 cursor-pointer"
-                      : "opacity-50 cursor-not-allowed"
-                    }`}
-                  onClick={() => {
-                    if (isReleased) {
-                      onToggleEpisode(
-                        tvShow.id,
-                        selectedSeason,
-                        episode.episode_number
-                      );
-                    }
-                  }}
+                  className="flex items-start gap-3 p-3 rounded-xl hover:bg-white/10 active:bg-white/15 transition-colors cursor-pointer"
+                  onClick={() =>
+                    onToggleEpisode(
+                      tvShow.id,
+                      selectedSeason,
+                      episode.episode_number
+                    )
+                  }
                 >
-                  {/* Episode image */}
-                  <div className="flex-shrink-0">
+                  {/* Episode image - hidden on mobile for cleaner look */}
+                  <div className="hidden md:block flex-shrink-0">
                     {episode.still_path ? (
                       <img
                         src={`${TMDB_IMAGE_BASE_URL.replace("w500", "w300")}${episode.still_path
                           }`}
                         alt={`Still from ${episode.name}`}
-                        className="w-20 h-12 md:w-28 md:h-16 object-cover rounded-lg bg-brand-surface"
+                        className="w-28 h-16 object-cover rounded-lg bg-brand-surface"
                         loading="lazy"
                       />
                     ) : (
-                      <div className="w-20 h-12 md:w-28 md:h-16 bg-brand-surface rounded-lg flex items-center justify-center">
-                        <FiImage className="w-5 h-5 md:w-6 md:h-6 text-brand-text-dim" />
+                      <div className="w-28 h-16 bg-brand-surface rounded-lg flex items-center justify-center">
+                        <FiImage className="w-6 h-6 text-brand-text-dim" />
                       </div>
+                    )}
+                  </div>
+
+                  {/* Watched indicator on mobile - shows at left */}
+                  <div className="md:hidden flex-shrink-0 w-6 h-6 flex items-center justify-center">
+                    {watchedEpisodes[selectedSeason]?.includes(episode.episode_number) ? (
+                      <FiCheck className="h-5 w-5 text-brand-primary" />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full border-2 border-white/30" />
                     )}
                   </div>
 
@@ -223,12 +217,9 @@ export const EpisodeTracker: React.FC<{
                       <span className="text-xs font-bold text-brand-primary">E{episode.episode_number}</span>
                       <h4 className="font-medium text-sm text-white truncate">{episode.name}</h4>
                     </div>
-                    <p className="text-xs text-brand-text-dim mt-0.5">
-                      {airDate}
-                      {!isReleased && <span className="ml-2 text-brand-primary">(Unreleased)</span>}
-                    </p>
+                    <p className="text-xs text-brand-text-dim mt-0.5">{airDate}</p>
                     {episode.overview && (
-                      <div>
+                      <div className="hidden md:block">
                         <p
                           className={`text-xs text-brand-text-dim mt-2 leading-relaxed ${!isExpanded && needsTruncation ? "line-clamp-2" : ""
                             }`}
@@ -251,8 +242,8 @@ export const EpisodeTracker: React.FC<{
                     )}
                   </div>
 
-                  {/* Watched indicator */}
-                  <div className="flex flex-shrink-0 pt-1">
+                  {/* Watched indicator on desktop - shows at right */}
+                  <div className="hidden md:flex flex-shrink-0 pt-1">
                     {watchedEpisodes[selectedSeason]?.includes(episode.episode_number) && (
                       <FiCheck className="h-5 w-5 text-brand-primary" />
                     )}

@@ -5,17 +5,12 @@ import type { WatchlistItem } from "../types/types";
 type WatchlistUpdateHandler = (item: WatchlistItem) => void;
 type WatchlistDeleteHandler = (data: { id: number }) => void;
 type WatchlistSyncHandler = (data: { trigger: string }) => void;
-type NotificationSyncHandler = (data: { id?: string }) => void;
 
 class SocketService {
     private socket: Socket | null = null;
     private updateHandlers: WatchlistUpdateHandler[] = [];
     private deleteHandlers: WatchlistDeleteHandler[] = [];
     private syncHandlers: WatchlistSyncHandler[] = [];
-    private notificationHandlers: ((notification: unknown) => void)[] = [];
-    private notificationReadHandlers: NotificationSyncHandler[] = [];
-    private notificationDeleteHandlers: NotificationSyncHandler[] = [];
-    private notificationReadAllHandlers: (() => void)[] = [];
 
     connect() {
         if (this.socket?.connected) return;
@@ -60,22 +55,6 @@ class SocketService {
         this.socket.on("watchlist:sync", (data: { trigger: string }) => {
             this.syncHandlers.forEach(handler => handler(data));
         });
-
-        this.socket.on("notification:new", (notification: unknown) => {
-            this.notificationHandlers.forEach(handler => handler(notification));
-        });
-
-        this.socket.on("notification:read", (data: { id: string }) => {
-            this.notificationReadHandlers.forEach(handler => handler(data));
-        });
-
-        this.socket.on("notification:delete", (data: { id: string }) => {
-            this.notificationDeleteHandlers.forEach(handler => handler(data));
-        });
-
-        this.socket.on("notification:read-all", () => {
-            this.notificationReadAllHandlers.forEach(handler => handler());
-        });
     }
 
     disconnect() {
@@ -103,34 +82,6 @@ class SocketService {
         this.syncHandlers.push(handler);
         return () => {
             this.syncHandlers = this.syncHandlers.filter(h => h !== handler);
-        };
-    }
-
-    onNotification(handler: (notification: unknown) => void) {
-        this.notificationHandlers.push(handler);
-        return () => {
-            this.notificationHandlers = this.notificationHandlers.filter(h => h !== handler);
-        };
-    }
-
-    onNotificationRead(handler: NotificationSyncHandler) {
-        this.notificationReadHandlers.push(handler);
-        return () => {
-            this.notificationReadHandlers = this.notificationReadHandlers.filter(h => h !== handler);
-        };
-    }
-
-    onNotificationDelete(handler: NotificationSyncHandler) {
-        this.notificationDeleteHandlers.push(handler);
-        return () => {
-            this.notificationDeleteHandlers = this.notificationDeleteHandlers.filter(h => h !== handler);
-        };
-    }
-
-    onNotificationReadAll(handler: () => void) {
-        this.notificationReadAllHandlers.push(handler);
-        return () => {
-            this.notificationReadAllHandlers = this.notificationReadAllHandlers.filter(h => h !== handler);
         };
     }
 
