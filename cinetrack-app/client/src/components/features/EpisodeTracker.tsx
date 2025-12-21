@@ -59,8 +59,8 @@ export const EpisodeTracker: React.FC<{
         1;
       setSelectedSeason(initialSeason);
       fetchSeasonData(initialSeason);
-      prevWatchedRef.current = watchedEpisodes; 
-    }, [tvShow.id, tvShow.seasons]); 
+      prevWatchedRef.current = watchedEpisodes;
+    }, [tvShow.id, tvShow.seasons]);
 
     useEffect(() => {
       if (!seasonData || !seasonData.episodes.length) {
@@ -85,8 +85,8 @@ export const EpisodeTracker: React.FC<{
     const handleSeasonChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
       const newSeason = Number(e.target.value);
       setSelectedSeason(newSeason);
-      setSeasonData(null); 
-      setExpandedOverviews(new Set()); 
+      setSeasonData(null);
+      setExpandedOverviews(new Set());
       fetchSeasonData(newSeason);
     };
 
@@ -102,12 +102,14 @@ export const EpisodeTracker: React.FC<{
       });
     };
 
-    const allEpisodesInSeason =
-      seasonData?.episodes.map((e) => e.episode_number) ?? [];
+    const airedEpisodesInSeason =
+      seasonData?.episodes
+        .filter((e) => e.air_date && new Date(e.air_date) <= new Date())
+        .map((e) => e.episode_number) ?? [];
     const watchedInSeason = watchedEpisodes[selectedSeason] ?? [];
     const isSeasonWatched =
-      allEpisodesInSeason.length > 0 &&
-      watchedInSeason.length === allEpisodesInSeason.length;
+      airedEpisodesInSeason.length > 0 &&
+      airedEpisodesInSeason.every((ep) => watchedInSeason.includes(ep));
 
     return (
       <div className="relative flex flex-col h-full">
@@ -117,13 +119,13 @@ export const EpisodeTracker: React.FC<{
             <select
               value={selectedSeason}
               onChange={handleSeasonChange}
-              className="w-full appearance-none bg-white/10 border border-white/20 text-white rounded-md py-2 px-4 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+              className="w-full appearance-none bg-brand-surface border border-white/20 text-white rounded-md py-2 px-4 focus:outline-none focus:ring-2 focus:ring-brand-primary"
               aria-label="Select season"
             >
               {tvShow.seasons
                 .filter((s) => s.episode_count > 0 && s.name)
                 .map((season) => (
-                  <option key={season.id} value={season.season_number}>
+                  <option key={season.id} value={season.season_number} className="bg-brand-surface text-white">
                     {season.name}
                   </option>
                 ))}
@@ -132,20 +134,20 @@ export const EpisodeTracker: React.FC<{
               <FiChevronDown className="h-4 w-4" />
             </div>
           </div>
-          {seasonData && (
+          {seasonData && airedEpisodesInSeason.length > 0 && (
             <button
               onClick={() =>
                 onToggleSeasonWatched(
                   tvShow.id,
                   selectedSeason,
-                  allEpisodesInSeason
+                  airedEpisodesInSeason
                 )
               }
               className="flex-shrink-0 py-2 px-3 text-xs font-semibold rounded-md transition-colors bg-white/10 hover:bg-white/20 text-white"
               aria-label={
                 isSeasonWatched
-                  ? "Mark all episodes in this season as unwatched"
-                  : "Mark all episodes in this season as watched"
+                  ? "Mark all aired episodes as unwatched"
+                  : "Mark all aired episodes as watched"
               }
             >
               {isSeasonWatched ? "Unmark All" : "Mark All"}
@@ -173,43 +175,42 @@ export const EpisodeTracker: React.FC<{
               const needsTruncation =
                 episode.overview && episode.overview.length > 150;
 
+              const isUnaired = episode.air_date
+                ? new Date(episode.air_date) > new Date()
+                : true;
+
               return (
                 <li
                   key={episode.id}
-                  className="flex items-start gap-3 p-3 rounded-xl hover:bg-white/10 active:bg-white/15 transition-colors cursor-pointer"
-                  onClick={() =>
-                    onToggleEpisode(
-                      tvShow.id,
-                      selectedSeason,
-                      episode.episode_number
-                    )
-                  }
+                  className={`flex items-start gap-3 p-3 rounded-xl transition-colors ${isUnaired
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:bg-white/10 active:bg-white/15 cursor-pointer'}`}
+                  onClick={() => {
+                    if (!isUnaired) {
+                      onToggleEpisode(
+                        tvShow.id,
+                        selectedSeason,
+                        episode.episode_number
+                      );
+                    }
+                  }}
                 >
-                  {/* Episode image - hidden on mobile for cleaner look */}
-                  <div className="hidden md:block flex-shrink-0">
+                  {/* Episode image - compact on mobile */}
+                  <div className="flex-shrink-0">
                     {episode.still_path ? (
                       <img
-                        src={`${TMDB_IMAGE_BASE_URL.replace("w500", "w300")}${episode.still_path
-                          }`}
+                        src={`${TMDB_IMAGE_BASE_URL.replace("w500", "w300")}${episode.still_path}`}
                         alt={`Still from ${episode.name}`}
-                        className="w-28 h-16 object-cover rounded-lg bg-brand-surface"
+                        className="w-16 h-10 md:w-28 md:h-16 object-cover rounded-lg bg-brand-surface"
                         loading="lazy"
                       />
                     ) : (
-                      <div className="w-28 h-16 bg-brand-surface rounded-lg flex items-center justify-center">
-                        <FiImage className="w-6 h-6 text-brand-text-dim" />
+                      <div className="w-16 h-10 md:w-28 md:h-16 bg-brand-surface rounded-lg flex items-center justify-center">
+                        <FiImage className="w-4 h-4 md:w-6 md:h-6 text-brand-text-dim" />
                       </div>
                     )}
                   </div>
 
-                  {/* Watched indicator on mobile - shows at left */}
-                  <div className="md:hidden flex-shrink-0 w-6 h-6 flex items-center justify-center">
-                    {watchedEpisodes[selectedSeason]?.includes(episode.episode_number) ? (
-                      <FiCheck className="h-5 w-5 text-brand-primary" />
-                    ) : (
-                      <div className="w-5 h-5 rounded-full border-2 border-white/30" />
-                    )}
-                  </div>
 
                   {/* Content */}
                   <div className="flex-grow min-w-0">
@@ -217,11 +218,14 @@ export const EpisodeTracker: React.FC<{
                       <span className="text-xs font-bold text-brand-primary">E{episode.episode_number}</span>
                       <h4 className="font-medium text-sm text-white truncate">{episode.name}</h4>
                     </div>
-                    <p className="text-xs text-brand-text-dim mt-0.5">{airDate}</p>
+                    <p className="text-xs text-brand-text-dim mt-0.5">
+                      {airDate}
+                      {isUnaired && <span className="ml-2 text-yellow-400">(Upcoming)</span>}
+                    </p>
                     {episode.overview && (
-                      <div className="hidden md:block">
+                      <div>
                         <p
-                          className={`text-xs text-brand-text-dim mt-2 leading-relaxed ${!isExpanded && needsTruncation ? "line-clamp-2" : ""
+                          className={`text-xs text-brand-text-dim mt-2 leading-relaxed hidden md:block ${!isExpanded && needsTruncation ? "line-clamp-2" : ""
                             }`}
                         >
                           {episode.overview}
@@ -232,7 +236,7 @@ export const EpisodeTracker: React.FC<{
                               e.stopPropagation();
                               toggleOverview(episode.id);
                             }}
-                            className="text-xs font-medium text-brand-primary hover:underline mt-1"
+                            className="text-xs font-medium text-brand-primary hover:underline mt-1 hidden md:inline"
                             aria-expanded={isExpanded}
                           >
                             {isExpanded ? "Less" : "More"}
@@ -242,11 +246,13 @@ export const EpisodeTracker: React.FC<{
                     )}
                   </div>
 
-                  {/* Watched indicator on desktop - shows at right */}
-                  <div className="hidden md:flex flex-shrink-0 pt-1">
-                    {watchedEpisodes[selectedSeason]?.includes(episode.episode_number) && (
+                  {/* Watched indicator - shows at right */}
+                  <div className="flex-shrink-0 pt-1">
+                    {watchedEpisodes[selectedSeason]?.includes(episode.episode_number) ? (
                       <FiCheck className="h-5 w-5 text-brand-primary" />
-                    )}
+                    ) : !isUnaired ? (
+                      <div className="w-5 h-5 rounded-full border-2 border-white/30" />
+                    ) : null}
                   </div>
                 </li>
               );
