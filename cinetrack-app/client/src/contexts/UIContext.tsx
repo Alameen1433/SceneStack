@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { searchMedia, getMovieDetails, getTVDetails } from "../services/tmdbService";
 import type { SearchResult, MovieDetail, TVDetail, Media } from "../types/types";
+import type { WatchlistStatus } from "../services/dbService";
 
 interface UIContextType {
     activeTab: "discover" | "lists" | "recommendations" | "stats";
@@ -34,8 +35,8 @@ interface UIContextType {
     openNotifications: () => void;
     closeNotifications: () => void;
 
-    viewAllSection: { title: string; items: Media[] } | null;
-    openViewAll: (title: string, items: Media[]) => void;
+    viewAllSection: { title: string; items: Media[]; status?: WatchlistStatus } | null;
+    openViewAll: (title: string, items: Media[], status?: WatchlistStatus) => void;
     closeViewAll: () => void;
 
     error: string | null;
@@ -56,7 +57,7 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [animatingMedia, setAnimatingMedia] = useState<{ media: Media; rect: DOMRect } | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-    const [viewAllSection, setViewAllSection] = useState<{ title: string; items: Media[] } | null>(null);
+    const [viewAllSection, setViewAllSection] = useState<{ title: string; items: Media[]; status?: WatchlistStatus } | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     const performSearch = useCallback(async (query: string) => {
@@ -195,10 +196,10 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         setIsNotificationsOpen(false);
     }, []);
 
-    const openViewAll = useCallback((title: string, items: Media[]) => {
+    const openViewAll = useCallback((title: string, items: Media[], status?: WatchlistStatus) => {
         const sectionSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
         window.history.pushState({ viewAll: sectionSlug }, "", `#viewall/${sectionSlug}`);
-        setViewAllSection({ title, items });
+        setViewAllSection({ title, items, status });
     }, []);
 
     const closeViewAll = useCallback(() => {

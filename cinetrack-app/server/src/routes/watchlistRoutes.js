@@ -6,6 +6,17 @@ const { watchlistItemSchema, watchlistImportSchema } = require("../validation/sc
 
 const router = express.Router();
 
+const computeWatchlistStatus = (item) => {
+    if (item.media_type === "movie") {
+        return item.watched ? "watched" : "watchlist";
+    }
+    const watchedCount = Object.values(item.watchedEpisodes || {})
+        .reduce((acc, eps) => acc + (Array.isArray(eps) ? eps.length : 0), 0);
+    if (watchedCount === 0) return "watchlist";
+    if (watchedCount >= item.number_of_episodes) return "watched";
+    return "watching";
+};
+
 module.exports = (watchlistCollection, broadcastToUser, client) => {
     // GET /api/watchlist
     router.get(
@@ -78,7 +89,8 @@ module.exports = (watchlistCollection, broadcastToUser, client) => {
             const item = req.body;
 
             const { _id, ...itemWithoutId } = item;
-            const itemWithUser = { ...itemWithoutId, userId: req.userId };
+            const watchlistStatus = computeWatchlistStatus(itemWithoutId);
+            const itemWithUser = { ...itemWithoutId, userId: req.userId, watchlistStatus };
 
             await watchlistCollection.replaceOne(
                 { id: item.id, userId: req.userId },
@@ -133,7 +145,11 @@ module.exports = (watchlistCollection, broadcastToUser, client) => {
             await watchlistCollection.deleteMany({ userId: req.userId });
 
             if (items.length > 0) {
-                const itemsWithUser = items.map((item) => ({ ...item, userId: req.userId }));
+                const itemsWithUser = items.map((item) => ({
+                    ...item,
+                    userId: req.userId,
+                    watchlistStatus: computeWatchlistStatus(item)
+                }));
                 await watchlistCollection.insertMany(itemsWithUser);
             }
 
@@ -142,7 +158,39 @@ module.exports = (watchlistCollection, broadcastToUser, client) => {
         })
     );
 
+    // GET /api/watchlist/by-status/:status - Paginated items by status
+    router.get(
+        "/by-status/:status",
+        authMiddleware,
+        asyncHandler(async (req, res) => {
+            const { status } = req.params;
+            const validStatuses = ["watchlist", "watching", "watched"];
+            if (!validStatuses.includes(status)) {
+                throw new AppError("Invalid status. Must be: watchlist, watching, or watched", 400);
+            }
 
+            const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+            const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 20));
+            const skip = (page - 1) * limit;
+
+            const query = { userId: req.userId, watchlistStatus: status };
+
+            const [items, totalCount] = await Promise.all([
+                watchlistCollection
+                    .find(query)
+                    .sort({ _id: -1 })
+                    .skip(skip)
+                    .limit(limit + 1)
+                    .toArray(),
+                watchlistCollection.countDocuments(query)
+            ]);
+
+            const hasMore = items.length > limit;
+            if (hasMore) items.pop();
+
+            res.json({ items, hasMore, page, totalCount });
+        })
+    );
 
     return router;
 };

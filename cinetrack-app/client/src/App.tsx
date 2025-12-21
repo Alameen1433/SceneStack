@@ -331,6 +331,7 @@ const AppLayout: React.FC = () => {
           <ViewAllPage
             title={viewAllSection.title}
             items={viewAllSection.items}
+            status={viewAllSection.status}
             onClose={closeViewAll}
           />
         </Suspense>

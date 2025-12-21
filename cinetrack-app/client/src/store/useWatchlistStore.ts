@@ -16,6 +16,12 @@ interface WatchlistState {
     isLoading: boolean;
     error: string | null;
     activeTagFilter: string | null;
+    
+    paginationState: {
+        watchlist: { hasMore: boolean; page: number; loading: boolean };
+        watching: { hasMore: boolean; page: number; loading: boolean };
+        watched: { hasMore: boolean; page: number; loading: boolean };
+    };
 
     recommendations: SearchResult[];
     recommendationsLoading: boolean;
@@ -27,6 +33,7 @@ interface WatchlistState {
 
     // Async Operations
     loadWatchlist: () => Promise<void>;
+    loadMoreByStatus: (status: 'watchlist' | 'watching' | 'watched') => Promise<void>;
     toggleWatchlist: (media: MovieDetail | TVDetail) => Promise<void>;
     toggleWatchlistFromSearchResult: (media: SearchResult) => Promise<void>;
     toggleMovieWatched: (movieId: number) => Promise<void>;
@@ -62,6 +69,11 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
     isLoading: true,
     error: null,
     activeTagFilter: null,
+    paginationState: {
+        watchlist: { hasMore: true, page: 0, loading: false },
+        watching: { hasMore: true, page: 0, loading: false },
+        watched: { hasMore: true, page: 0, loading: false },
+    },
     recommendations: [],
     recommendationsLoading: false,
 
@@ -73,14 +85,71 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
     loadWatchlist: async () => {
         set({ isLoading: true });
         try {
-            const items = await dbService.getAllWatchlistItems();
-            set({ watchlist: items, isLoading: false });
+            const [watchlistRes, watchingRes, watchedRes] = await Promise.all([
+                dbService.getWatchlistByStatus('watchlist', 1, 20),
+                dbService.getWatchlistByStatus('watching', 1, 20),
+                dbService.getWatchlistByStatus('watched', 1, 20),
+            ]);
+
+            const allItems = [
+                ...watchlistRes.items,
+                ...watchingRes.items,
+                ...watchedRes.items,
+            ];
+
+            set({
+                watchlist: allItems,
+                isLoading: false,
+                paginationState: {
+                    watchlist: { hasMore: watchlistRes.hasMore, page: 1, loading: false },
+                    watching: { hasMore: watchingRes.hasMore, page: 1, loading: false },
+                    watched: { hasMore: watchedRes.hasMore, page: 1, loading: false },
+                },
+            });
             socketService.connect();
         } catch (err) {
             console.error("Failed to load watchlist from DB", err);
             set({
                 error: "Could not load your watchlist. Please try refreshing.",
                 isLoading: false
+            });
+        }
+    },
+
+    loadMoreByStatus: async (status) => {
+        const { paginationState, watchlist } = get();
+        const categoryState = paginationState[status];
+
+        if (!categoryState.hasMore || categoryState.loading) return;
+
+        set({
+            paginationState: {
+                ...paginationState,
+                [status]: { ...categoryState, loading: true },
+            },
+        });
+
+        try {
+            const nextPage = categoryState.page + 1;
+            const response = await dbService.getWatchlistByStatus(status, nextPage, 20);
+
+            const existingIds = new Set(watchlist.map(i => i.id));
+            const newItems = response.items.filter(item => !existingIds.has(item.id));
+
+            set({
+                watchlist: [...watchlist, ...newItems],
+                paginationState: {
+                    ...get().paginationState,
+                    [status]: { hasMore: response.hasMore, page: nextPage, loading: false },
+                },
+            });
+        } catch (err) {
+            console.error(`Failed to load more ${status} items`, err);
+            set({
+                paginationState: {
+                    ...get().paginationState,
+                    [status]: { ...categoryState, loading: false },
+                },
             });
         }
     },
@@ -411,32 +480,27 @@ export const getFilteredItems = (watchlist: WatchlistItem[], activeTagFilter: st
     const watchedItems: WatchlistItem[] = [];
 
     for (const item of filteredWatchlist) {
-        if (item.media_type === "movie") {
-            if (item.watched) {
-                watchedItems.push(item);
+        // Use server-computed status if available, otherwise compute locally
+        let status = item.watchlistStatus;
+        if (!status) {
+            if (item.media_type === "movie") {
+                status = item.watched ? "watched" : "watchlist";
             } else {
-                watchlistItems.push(item);
+                const watchedCount = Object.values(item.watchedEpisodes || {}).reduce(
+                    (acc, eps) => acc + (Array.isArray(eps) ? eps.length : 0), 0
+                );
+                if (watchedCount === 0) status = "watchlist";
+                else if (watchedCount >= item.number_of_episodes) status = "watched";
+                else status = "watching";
             }
-        } else if (item.media_type === "tv") {
-            const watchedCount = Object.values(item.watchedEpisodes || {}).reduce(
-                (acc, eps) => acc + (Array.isArray(eps) ? eps.length : 0),
-                0
-            );
-            if (watchedCount === 0) {
-                watchlistItems.push(item);
-            } else if (
-                watchedCount > 0 &&
-                watchedCount < item.number_of_episodes
-            ) {
-                currentlyWatchingItems.push(item);
-            } else if (
-                watchedCount > 0 &&
-                watchedCount >= item.number_of_episodes
-            ) {
-                watchedItems.push(item);
-            } else {
-                watchlistItems.push(item);
-            }
+        }
+
+        if (status === "watched") {
+            watchedItems.push(item);
+        } else if (status === "watching" && item.media_type === "tv") {
+            currentlyWatchingItems.push(item);
+        } else {
+            watchlistItems.push(item);
         }
     }
     return { watchlistItems, currentlyWatchingItems, watchedItems };

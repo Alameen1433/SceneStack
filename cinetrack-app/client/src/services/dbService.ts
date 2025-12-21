@@ -83,3 +83,22 @@ export const clearAndBulkPut = async (
     body: JSON.stringify(items),
   });
 };
+
+export type WatchlistStatus = "watchlist" | "watching" | "watched";
+
+interface PaginatedResponse {
+  items: WatchlistItem[];
+  hasMore: boolean;
+  page: number;
+  totalCount: number;
+}
+
+export const getWatchlistByStatus = async (
+  status: WatchlistStatus,
+  page = 1,
+  limit = 20
+): Promise<PaginatedResponse> => {
+  return apiFetch<PaginatedResponse>(
+    `/watchlist/by-status/${status}?page=${page}&limit=${limit}`
+  );
+};

@@ -77,6 +77,7 @@ export const ListsPage: React.FC = memo(() => {
                     emptySubMessage="Use the search bar to find movies and shows to add."
                     selectedMediaId={selectedMediaId}
                     enablePagination
+                    status="watchlist"
                 />
                 {/* Watched - Pagination */}
                 <MediaSection
@@ -87,6 +88,7 @@ export const ListsPage: React.FC = memo(() => {
                     emptyMessage="You haven't marked any items as watched yet."
                     selectedMediaId={selectedMediaId}
                     enablePagination
+                    status="watched"
                 />
             </div>
         </>

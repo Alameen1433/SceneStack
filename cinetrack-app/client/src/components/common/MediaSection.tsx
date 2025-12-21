@@ -3,6 +3,7 @@ import { MediaCard } from "../media/MediaCard";
 import { ShowMoreCard } from "./ShowMoreCard";
 import { useUIContext } from "../../contexts/UIContext";
 import type { Media } from "../../types/types";
+import type { WatchlistStatus } from "../../services/dbService";
 
 interface MediaSectionProps {
     title: string;
@@ -13,8 +14,8 @@ interface MediaSectionProps {
     emptyMessage: string;
     emptySubMessage?: string;
     selectedMediaId: string | null;
-    /** Enable pagination with ShowMoreCard and route navigation. Defaults to false (uses expandable Show More button). */
     enablePagination?: boolean;
+    status?: WatchlistStatus;
 }
 
 // Responsive breakpoints matching Tailwind's grid columns
@@ -45,6 +46,7 @@ export const MediaSection: React.FC<MediaSectionProps> = memo(({
     emptySubMessage,
     selectedMediaId,
     enablePagination = false,
+    status,
 }) => {
     const { openViewAll } = useUIContext();
     const [isExpanded, setIsExpanded] = useState(false);
@@ -65,7 +67,6 @@ export const MediaSection: React.FC<MediaSectionProps> = memo(({
     // Calculate items to show based on mode
     const maxVisibleItems = useMemo(() => columns * rows, [columns, rows]);
 
-    // Determine displayed items based on mode
     const { displayedItems, hasMoreItems, remainingCount } = useMemo(() => {
         if (enablePagination) {
             // Pagination mode: show limited rows with ShowMoreCard
@@ -89,8 +90,8 @@ export const MediaSection: React.FC<MediaSectionProps> = memo(({
     }, [enablePagination, items, maxVisibleItems, isExpanded, columns]);
 
     const handleViewAll = useCallback(() => {
-        openViewAll(title, items);
-    }, [openViewAll, title, items]);
+        openViewAll(title, items, status);
+    }, [openViewAll, title, items, status]);
 
     const handleToggleExpand = useCallback(() => {
         setIsExpanded(prev => !prev);

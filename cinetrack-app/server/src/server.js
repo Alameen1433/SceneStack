@@ -101,6 +101,9 @@ app.use("/api", (req, res, next) => {
 });
 
 app.use(express.static(path.join(__dirname, "../../client/dist")));
+app.get(["/assets/*", "/*.js", "/*.css", "/*.json", "/*.ico"], (req, res) => {
+  res.status(404).send("Resource not found");
+});
 
 // --- MongoDB Connection ---
 const client = new MongoClient(config.mongo.uri, {
@@ -124,6 +127,7 @@ async function connectToDb() {
 
     // Create indexes
     await watchlistCollection.createIndex({ userId: 1, id: 1 }, { unique: true });
+    await watchlistCollection.createIndex({ userId: 1, watchlistStatus: 1 });
     await usersCollection.createIndex({ email: 1 }, { unique: true });
   } catch (err) {
     console.error("Failed to connect to MongoDB:", err.message);

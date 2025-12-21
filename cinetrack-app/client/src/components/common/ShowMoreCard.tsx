@@ -22,11 +22,6 @@ export const ShowMoreCard: React.FC<ShowMoreCardProps> = ({
 
                 {/* Content */}
                 <div className="relative z-10 flex flex-col items-center justify-center gap-2">
-                    {/* Count badge */}
-                    <span className="text-2xl sm:text-3xl font-bold text-brand-text-light">
-                        +{remainingCount}
-                    </span>
-
                     {/* Arrow icon */}
                     <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-brand-primary/30 flex items-center justify-center backdrop-blur-sm">
                         <svg
