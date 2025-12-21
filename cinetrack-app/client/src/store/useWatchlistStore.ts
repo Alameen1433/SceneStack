@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import * as dbService from '../services/dbService';
 import { socketService } from '../services/socketService';
-import { getMovieDetails, getTVDetails, getMovieRecommendations, getTVRecommendations } from '../services/tmdbService';
+import { getMovieDetails, getTVDetails } from '../services/tmdbService';
 import type {
     WatchlistItem,
     MovieDetail,
@@ -16,7 +16,7 @@ interface WatchlistState {
     isLoading: boolean;
     error: string | null;
     activeTagFilter: string | null;
-    
+
     paginationState: {
         watchlist: { hasMore: boolean; page: number; loading: boolean };
         watching: { hasMore: boolean; page: number; loading: boolean };
@@ -42,7 +42,7 @@ interface WatchlistState {
     updateTags: (mediaId: number, newTags: string[]) => Promise<void>;
     exportWatchlist: () => Promise<void>;
     importWatchlist: (file: File) => Promise<void>;
-    fetchRecommendations: () => Promise<void>;
+    fetchRecommendations: (refresh?: boolean) => Promise<void>;
 
     syncItem: (item: WatchlistItem) => void;
     deleteItem: (id: number) => void;
@@ -398,7 +398,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
         });
     },
 
-    fetchRecommendations: async () => {
+    fetchRecommendations: async (refresh = false) => {
         const { watchlist } = get();
 
         if (watchlist.length === 0) {
@@ -409,28 +409,9 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
         set({ recommendationsLoading: true });
 
         try {
-            const watchlistIds = new Set(watchlist.map(item => item.id));
-            const shuffled = [...watchlist].sort(() => 0.5 - Math.random());
-            const seedItems = shuffled.slice(0, 3);
-
-            const recPromises = seedItems.map((item) =>
-                item.media_type === "movie"
-                    ? getMovieRecommendations(item.id)
-                    : getTVRecommendations(item.id)
-            );
-
-            const recArrays = await Promise.all(recPromises);
-            const flatRecs = recArrays.flat();
-
-            const uniqueRecsMap = new Map<number, SearchResult>();
-            flatRecs.forEach((rec) => {
-                if (!watchlistIds.has(rec.id) && rec.poster_path) {
-                    uniqueRecsMap.set(rec.id, rec);
-                }
-            });
-
+            const { recommendations } = await dbService.getRecommendations(refresh);
             set({
-                recommendations: Array.from(uniqueRecsMap.values()),
+                recommendations,
                 recommendationsLoading: false
             });
         } catch (err) {

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { FiChevronDown, FiLoader, FiImage, FiCheck } from "react-icons/fi";
 import type { TVDetail, SeasonDetail } from "../../types/types";
 import { TMDB_IMAGE_BASE_URL } from "../../constants/constants";
@@ -34,7 +35,6 @@ export const EpisodeTracker: React.FC<{
     const [seasonData, setSeasonData] = useState<SeasonDetail | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [showConfetti, setShowConfetti] = useState(false);
-    const prevWatchedRef = useRef(watchedEpisodes);
     const [expandedOverviews, setExpandedOverviews] = useState(new Set<number>());
 
     const fetchSeasonData = useCallback(
@@ -59,28 +59,7 @@ export const EpisodeTracker: React.FC<{
         1;
       setSelectedSeason(initialSeason);
       fetchSeasonData(initialSeason);
-      prevWatchedRef.current = watchedEpisodes;
     }, [tvShow.id, tvShow.seasons]);
-
-    useEffect(() => {
-      if (!seasonData || !seasonData.episodes.length) {
-        prevWatchedRef.current = watchedEpisodes;
-        return;
-      }
-
-      const prevWatchedInSeason = prevWatchedRef.current[selectedSeason] || [];
-      const currentWatchedInSeason = watchedEpisodes[selectedSeason] || [];
-      const totalEpisodes = seasonData.episodes.length;
-
-      const wasSeasonCompleted = prevWatchedInSeason.length < totalEpisodes;
-      const isSeasonCompleted = currentWatchedInSeason.length === totalEpisodes;
-
-      if (wasSeasonCompleted && isSeasonCompleted) {
-        setShowConfetti(true);
-      }
-
-      prevWatchedRef.current = watchedEpisodes;
-    }, [watchedEpisodes, seasonData, selectedSeason]);
 
     const handleSeasonChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
       const newSeason = Number(e.target.value);
@@ -111,9 +90,32 @@ export const EpisodeTracker: React.FC<{
       airedEpisodesInSeason.length > 0 &&
       airedEpisodesInSeason.every((ep) => watchedInSeason.includes(ep));
 
+    const handleMarkAll = () => {
+      if (!isSeasonWatched) {
+        setShowConfetti(true);
+      }
+      onToggleSeasonWatched(tvShow.id, selectedSeason, airedEpisodesInSeason);
+    };
+
+    const handleEpisodeToggle = (episodeNumber: number) => {
+      const isCurrentlyWatched = watchedInSeason.includes(episodeNumber);
+      if (!isCurrentlyWatched) {
+        const willComplete = airedEpisodesInSeason.every(
+          (ep) => ep === episodeNumber || watchedInSeason.includes(ep)
+        );
+        if (willComplete) {
+          setShowConfetti(true);
+        }
+      }
+      onToggleEpisode(tvShow.id, selectedSeason, episodeNumber);
+    };
+
     return (
       <div className="relative flex flex-col h-full">
-        {showConfetti && <Confetti onComplete={() => setShowConfetti(false)} />}
+        {showConfetti && createPortal(
+          <Confetti onComplete={() => setShowConfetti(false)} />,
+          document.body
+        )}
         <div className="flex items-center gap-4 mb-4">
           <div className="relative flex-grow">
             <select
@@ -136,13 +138,7 @@ export const EpisodeTracker: React.FC<{
           </div>
           {seasonData && airedEpisodesInSeason.length > 0 && (
             <button
-              onClick={() =>
-                onToggleSeasonWatched(
-                  tvShow.id,
-                  selectedSeason,
-                  airedEpisodesInSeason
-                )
-              }
+              onClick={handleMarkAll}
               className="flex-shrink-0 py-2 px-3 text-xs font-semibold rounded-md transition-colors bg-white/10 hover:bg-white/20 text-white"
               aria-label={
                 isSeasonWatched
@@ -187,11 +183,7 @@ export const EpisodeTracker: React.FC<{
                     : 'hover:bg-white/10 active:bg-white/15 cursor-pointer'}`}
                   onClick={() => {
                     if (!isUnaired) {
-                      onToggleEpisode(
-                        tvShow.id,
-                        selectedSeason,
-                        episode.episode_number
-                      );
+                      handleEpisodeToggle(episode.episode_number);
                     }
                   }}
                 >
@@ -223,10 +215,15 @@ export const EpisodeTracker: React.FC<{
                       {isUnaired && <span className="ml-2 text-yellow-400">(Upcoming)</span>}
                     </p>
                     {episode.overview && (
-                      <div>
+                      <div className="hidden md:block">
                         <p
-                          className={`text-xs text-brand-text-dim mt-2 leading-relaxed hidden md:block ${!isExpanded && needsTruncation ? "line-clamp-2" : ""
-                            }`}
+                          className="text-xs text-brand-text-dim mt-2 leading-relaxed"
+                          style={{
+                            display: '-webkit-box',
+                            WebkitLineClamp: isExpanded ? 'unset' : 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: isExpanded ? 'visible' : 'hidden',
+                          }}
                         >
                           {episode.overview}
                         </p>
@@ -236,7 +233,7 @@ export const EpisodeTracker: React.FC<{
                               e.stopPropagation();
                               toggleOverview(episode.id);
                             }}
-                            className="text-xs font-medium text-brand-primary hover:underline mt-1 hidden md:inline"
+                            className="text-xs font-medium text-brand-primary hover:underline mt-1"
                             aria-expanded={isExpanded}
                           >
                             {isExpanded ? "Less" : "More"}

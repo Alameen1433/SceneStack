@@ -24,7 +24,7 @@ export const RecommendationsPage: React.FC = memo(() => {
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-3xl font-bold text-brand-text-light">For You</h2>
                 <button
-                    onClick={fetchRecommendations}
+                    onClick={() => fetchRecommendations(true)}
                     disabled={isLoading || watchlist.length === 0}
                     className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light hover:bg-brand-surface transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label="Refresh recommendations"

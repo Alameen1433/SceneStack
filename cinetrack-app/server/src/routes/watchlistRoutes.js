@@ -3,8 +3,28 @@ const { authMiddleware } = require("../middleware/authMiddleware");
 const { asyncHandler, AppError } = require("../middleware/errorHandler");
 const { validate } = require("../middleware/validate");
 const { watchlistItemSchema, watchlistImportSchema } = require("../validation/schemas");
+const { cache } = require("../config");
 
 const router = express.Router();
+
+const TMDB_API_BASE_URL = "https://api.themoviedb.org/3";
+const TMDB_API_TOKEN = process.env.TMDB_API_READ_ACCESS_TOKEN;
+const RECOMMENDATIONS_TTL = 12 * 60 * 60; // 12 hours
+
+const fetchFromTMDB = async (endpoint) => {
+    const url = `${TMDB_API_BASE_URL}/${endpoint}`;
+    const response = await fetch(url, {
+        method: "GET",
+        headers: {
+            accept: "application/json",
+            Authorization: `Bearer ${TMDB_API_TOKEN}`,
+        },
+    });
+    if (!response.ok) {
+        throw new Error(`TMDB API error: ${response.status}`);
+    }
+    return response.json();
+};
 
 const computeWatchlistStatus = (item) => {
     if (item.media_type === "movie") {
@@ -59,6 +79,67 @@ module.exports = (watchlistCollection, broadcastToUser, client) => {
                     dataSize: dbStats?.dataSize || 0,
                 },
             });
+        })
+    );
+
+    // GET /api/watchlist/recommendations - User-specific recommendations cached for 12 hours
+    router.get(
+        "/recommendations",
+        authMiddleware,
+        asyncHandler(async (req, res) => {
+            const refresh = req.query.refresh === "true";
+            const cacheKey = `user:recommendations:${req.userId}`;
+
+            if (!refresh) {
+                const cached = await cache.get(cacheKey);
+                if (cached) {
+                    res.set("X-Cache", "HIT");
+                    return res.json(cached);
+                }
+            }
+
+            const watchlist = await watchlistCollection
+                .find({ userId: req.userId })
+                .toArray();
+
+            if (watchlist.length === 0) {
+                return res.json({ recommendations: [] });
+            }
+
+            const watchlistIds = new Set(watchlist.map((item) => item.id));
+            const shuffled = [...watchlist].sort(() => 0.5 - Math.random());
+            const seedItems = shuffled.slice(0, 5);
+
+            const recPromises = seedItems.map(async (item) => {
+                try {
+                    const response = await fetchFromTMDB(
+                        `${item.media_type}/${item.id}/recommendations`
+                    );
+                    return response.results.map((r) => ({
+                        ...r,
+                        media_type: item.media_type,
+                    }));
+                } catch {
+                    return [];
+                }
+            });
+
+            const recArrays = await Promise.all(recPromises);
+            const flatRecs = recArrays.flat();
+
+            const uniqueRecsMap = new Map();
+            flatRecs.forEach((rec) => {
+                if (!watchlistIds.has(rec.id) && rec.poster_path) {
+                    uniqueRecsMap.set(rec.id, rec);
+                }
+            });
+
+            const recommendations = Array.from(uniqueRecsMap.values());
+            const data = { recommendations };
+
+            await cache.set(cacheKey, data, RECOMMENDATIONS_TTL);
+            res.set("X-Cache", "MISS");
+            res.json(data);
         })
     );
 
@@ -194,3 +275,4 @@ module.exports = (watchlistCollection, broadcastToUser, client) => {
 
     return router;
 };
+

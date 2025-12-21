@@ -102,3 +102,15 @@ export const getWatchlistByStatus = async (
     `/watchlist/by-status/${status}?page=${page}&limit=${limit}`
   );
 };
+
+interface RecommendationsResponse {
+  recommendations: import("../types/types").SearchResult[];
+}
+
+export const getRecommendations = async (
+  refresh = false
+): Promise<RecommendationsResponse> => {
+  return apiFetch<RecommendationsResponse>(
+    `/watchlist/recommendations${refresh ? "?refresh=true" : ""}`
+  );
+};
