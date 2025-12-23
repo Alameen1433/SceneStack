@@ -98,6 +98,8 @@ module.exports = {
         secret: process.env.JWT_SECRET,
     },
     inviteCodes: process.env.INVITE_CODES.split(",").map((c) => c.trim()).filter(Boolean),
+    demoCode: process.env.DEMO_CODE || "DEMONOW",
+    demoTtlSeconds: parseInt(process.env.DEMO_TTL_SECONDS, 10) || 14400,
     port: parseInt(process.env.PORT, 10) || 3001,
     cache,
 };

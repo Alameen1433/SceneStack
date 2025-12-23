@@ -6,6 +6,7 @@ import { useWatchlistStore, getWatchlistIds } from "./store/useWatchlistStore";
 import { UIProvider, useUIContext } from "./contexts/UIContext";
 import { DiscoverProvider } from "./contexts/DiscoverContext";
 import { AuthProvider, useAuthContext } from "./contexts/AuthContext";
+import { DemoWelcomeModal, useDemoWelcome } from "./components/common/DemoWelcomeModal";
 import { SearchBar } from "./components/common/SearchBar";
 import { SearchPalette } from "./components/common/SearchPalette";
 import { NotificationsModal } from "./components/common/NotificationsModal";
@@ -56,21 +57,21 @@ const Header: React.FC = memo(() => {
           </div>
           {/* Tablet - Regular SearchBar */}
           <div className="lg:hidden w-full max-w-sm flex items-center gap-2 ml-auto">
-            <div className="flex-grow">
+            <div className="grow">
               <SearchBar onSearch={handleSearch} isLoading={isSearchLoading} />
             </div>
             <a
               href="https://github.com/Alameen1433"
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light hover:bg-brand-surface transition-colors flex-shrink-0"
+              className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light hover:bg-brand-surface transition-colors shrink-0"
               aria-label="View on GitHub"
             >
               <FiGithub className="h-6 w-6" />
             </a>
             <button
               onClick={openNotifications}
-              className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light hover:bg-brand-surface transition-colors flex-shrink-0 relative"
+              className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light hover:bg-brand-surface transition-colors shrink-0 relative"
               aria-label="Notifications"
             >
               <FiBell className="h-6 w-6" />
@@ -78,7 +79,7 @@ const Header: React.FC = memo(() => {
             </button>
             <button
               onClick={openSettings}
-              className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light hover:bg-brand-surface transition-colors flex-shrink-0"
+              className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light hover:bg-brand-surface transition-colors shrink-0"
               aria-label="Open settings"
             >
               <FiSettings className="h-6 w-6" />
@@ -101,7 +102,7 @@ const Header: React.FC = memo(() => {
               >
                 <FiArrowLeft className="h-6 w-6" />
               </button>
-              <div className="flex-grow">
+              <div className="grow">
                 <SearchBar
                   onSearch={handleSearch}
                   isLoading={isSearchLoading}
@@ -141,7 +142,7 @@ const Header: React.FC = memo(() => {
                 </button>
                 <button
                   onClick={openSettings}
-                  className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light hover:bg-brand-surface transition-colors flex-shrink-0"
+                  className="p-2 rounded-full text-brand-text-dim hover:text-brand-text-light hover:bg-brand-surface transition-colors shrink-0"
                   aria-label="Open settings"
                 >
                   <FiSettings className="h-6 w-6" />
@@ -381,7 +382,8 @@ const App: React.FC = () => {
 
 // Renders either AuthPage or the main app based on auth state
 const AuthenticatedApp: React.FC = () => {
-  const { isAuthenticated, isLoading } = useAuthContext();
+  const { isAuthenticated, isLoading, user } = useAuthContext();
+  const { showWelcome, closeWelcome } = useDemoWelcome(user?.isDemo);
 
   if (isLoading) {
     return (
@@ -417,6 +419,7 @@ const AuthenticatedApp: React.FC = () => {
           </DiscoverProvider>
         </UIProvider>
       </WatchlistProvider>
+      {showWelcome && <DemoWelcomeModal onClose={closeWelcome} />}
       <style>{`
         @keyframes fadeIn {
           from {

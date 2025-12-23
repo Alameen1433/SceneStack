@@ -10,38 +10,62 @@ const { ObjectId } = require("mongodb");
 const router = express.Router();
 
 const INVITE_CODES = config.inviteCodes;
+const DEMO_CODE = config.demoCode;
 
-module.exports = (usersCollection) => {
+module.exports = (usersCollection, demoUsersCollection) => {
+    const findUser = async (query) => {
+        let user = await usersCollection.findOne(query);
+        if (user) return { user, isDemo: false };
+
+        user = await demoUsersCollection.findOne(query);
+        if (user) return { user, isDemo: true };
+
+        return { user: null, isDemo: false };
+    };
+
+    const getCollectionForUser = async (userId) => {
+        const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+        if (user) return { collection: usersCollection, user, isDemo: false };
+
+        const demoUser = await demoUsersCollection.findOne({ _id: new ObjectId(userId) });
+        if (demoUser) return { collection: demoUsersCollection, user: demoUser, isDemo: true };
+
+        return { collection: null, user: null, isDemo: false };
+    };
+
     // POST /api/auth/register
     router.post("/register", validate(registerSchema), async (req, res) => {
         try {
             const { email, password, inviteCode } = req.body;
+            const isDemo = inviteCode === DEMO_CODE;
 
-            if (!INVITE_CODES.includes(inviteCode)) {
+            if (!isDemo && !INVITE_CODES.includes(inviteCode)) {
                 return res.status(403).json({ message: "Invalid invite code" });
             }
 
-            const existingUser = await usersCollection.findOne({ email: email.toLowerCase() });
+            const { user: existingUser } = await findUser({ email: email.toLowerCase() });
             if (existingUser) {
                 return res.status(409).json({ message: "Email already registered" });
             }
 
             const passwordHash = await bcrypt.hash(password, 10);
+            const collection = isDemo ? demoUsersCollection : usersCollection;
 
-            const result = await usersCollection.insertOne({
+            const result = await collection.insertOne({
                 email: email.toLowerCase(),
                 passwordHash,
                 createdAt: new Date(),
             });
 
+            const tokenExpiry = isDemo ? "4h" : "7d";
             const token = jwt.sign({ userId: result.insertedId.toString() }, JWT_SECRET, {
-                expiresIn: "7d",
+                expiresIn: tokenExpiry,
             });
 
             res.status(201).json({
                 message: "Account created successfully",
                 token,
-                user: { id: result.insertedId, email: email.toLowerCase() },
+                user: { id: result.insertedId, email: email.toLowerCase(), isDemo },
             });
         } catch (err) {
             console.error("Registration error:", err);
@@ -54,7 +78,7 @@ module.exports = (usersCollection) => {
         try {
             const { email, password } = req.body;
 
-            const user = await usersCollection.findOne({ email: email.toLowerCase() });
+            const { user, isDemo } = await findUser({ email: email.toLowerCase() });
             if (!user) {
                 return res.status(401).json({ message: "Invalid email or password" });
             }
@@ -64,13 +88,14 @@ module.exports = (usersCollection) => {
                 return res.status(401).json({ message: "Invalid email or password" });
             }
 
+            const tokenExpiry = isDemo ? "4h" : "7d";
             const token = jwt.sign({ userId: user._id.toString() }, JWT_SECRET, {
-                expiresIn: "7d",
+                expiresIn: tokenExpiry,
             });
 
             res.json({
                 token,
-                user: { id: user._id, email: user.email },
+                user: { id: user._id, email: user.email, isDemo },
             });
         } catch (err) {
             console.error("Login error:", err);
@@ -81,14 +106,14 @@ module.exports = (usersCollection) => {
     // GET /api/auth/me - Get current user
     router.get("/me", authMiddleware, async (req, res) => {
         try {
-            const user = await usersCollection.findOne({ _id: new ObjectId(req.userId) });
+            const { user, isDemo } = await getCollectionForUser(req.userId);
 
             if (!user) {
                 return res.status(404).json({ message: "User not found" });
             }
 
             res.json({
-                user: { id: user._id, email: user.email },
+                user: { id: user._id, email: user.email, isDemo },
             });
         } catch (err) {
             console.error("Get user error:", err);
@@ -100,10 +125,14 @@ module.exports = (usersCollection) => {
     router.put("/password", authMiddleware, validate(changePasswordSchema), async (req, res) => {
         try {
             const { currentPassword, newPassword } = req.body;
+            const { collection, user, isDemo } = await getCollectionForUser(req.userId);
 
-            const user = await usersCollection.findOne({ _id: new ObjectId(req.userId) });
             if (!user) {
                 return res.status(404).json({ message: "User not found" });
+            }
+
+            if (isDemo) {
+                return res.status(403).json({ message: "Demo accounts cannot change password" });
             }
 
             const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
@@ -112,7 +141,7 @@ module.exports = (usersCollection) => {
             }
 
             const newPasswordHash = await bcrypt.hash(newPassword, 10);
-            await usersCollection.updateOne(
+            await collection.updateOne(
                 { _id: new ObjectId(req.userId) },
                 { $set: { passwordHash: newPasswordHash } }
             );
@@ -124,11 +153,20 @@ module.exports = (usersCollection) => {
         }
     });
 
-    // DELETE /api/auth - Delete account
+    // DELETE /api/auth - Delete account 
     router.delete("/", authMiddleware, async (req, res) => {
         try {
-            const userId = new ObjectId(req.userId);
-            const userResult = await usersCollection.deleteOne({ _id: userId });
+            const { collection, user, isDemo } = await getCollectionForUser(req.userId);
+
+            if (!user) {
+                return res.status(404).json({ message: "User not found" });
+            }
+
+            if (isDemo) {
+                return res.status(403).json({ message: "Demo accounts are deleted automatically" });
+            }
+
+            const userResult = await collection.deleteOne({ _id: new ObjectId(req.userId) });
             if (userResult.deletedCount === 0) {
                 return res.status(404).json({ message: "User not found" });
             }
