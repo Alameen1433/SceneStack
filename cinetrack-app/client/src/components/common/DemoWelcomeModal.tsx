@@ -76,8 +76,12 @@ export const useDemoWelcome = (isDemo: boolean | undefined) => {
     const [showWelcome, setShowWelcome] = useState(false);
 
     useEffect(() => {
-        if (isDemo && !sessionStorage.getItem(DEMO_WELCOME_SHOWN_KEY)) {
+        // Only show for demo users who haven't seen the modal yet
+        if (isDemo === true && !sessionStorage.getItem(DEMO_WELCOME_SHOWN_KEY)) {
             setShowWelcome(true);
+        } else if (isDemo === false) {
+            // Ensure modal is hidden for non-demo users
+            setShowWelcome(false);
         }
     }, [isDemo]);
 

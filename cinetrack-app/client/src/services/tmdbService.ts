@@ -70,28 +70,55 @@ export const searchMedia = async (query: string): Promise<SearchResult[]> => {
   return data.results;
 };
 
+interface DiscoverData {
+  trending: SearchResult[];
+  popularMovies: SearchResult[];
+  popularTV: SearchResult[];
+}
+
+let cachedDiscover: DiscoverData | null = null;
+
+const fetchDiscoverData = async (): Promise<DiscoverData> => {
+  if (cachedDiscover) return cachedDiscover;
+
+  try {
+    const data = await fetchFromProxy<DiscoverData>("/discover");
+    cachedDiscover = data;
+    setTimeout(() => { cachedDiscover = null; }, 5 * 60 * 1000);
+    return data;
+  } catch (err) {
+    console.warn("Proxy /discover failed, falling back to direct TMDB:", err);
+    const [trending, popularMovies, popularTV] = await Promise.all([
+      fetchFromTMDB<{ results: SearchResult[] }>("trending/all/week"),
+      fetchFromTMDB<{ results: Omit<SearchResult, "media_type">[] }>("movie/popular"),
+      fetchFromTMDB<{ results: Omit<SearchResult, "media_type">[] }>("tv/popular"),
+    ]);
+    const data = {
+      trending: trending.results.filter(
+        (item) => item.media_type === "movie" || item.media_type === "tv"
+      ),
+      popularMovies: popularMovies.results.map((item) => ({ ...item, media_type: "movie" as const })),
+      popularTV: popularTV.results.map((item) => ({ ...item, media_type: "tv" as const })),
+    };
+    cachedDiscover = data;
+    setTimeout(() => { cachedDiscover = null; }, 5 * 60 * 1000);
+    return data;
+  }
+};
+
 export const getTrendingMedia = async (): Promise<SearchResult[]> => {
-  const data = await fetchFromTMDB<{ results: SearchResult[] }>(
-    `trending/all/week`
-  );
-  return data.results.filter(
-    (item) => item.media_type === "movie" || item.media_type === "tv"
-  );
+  const data = await fetchDiscoverData();
+  return data.trending;
 };
 
 export const getPopularMovies = async (): Promise<SearchResult[]> => {
-  const data = await fetchFromTMDB<{
-    results: Omit<SearchResult, "media_type">[];
-  }>(`movie/popular`);
-  return data.results.map((item) => ({ ...item, media_type: "movie" }));
+  const data = await fetchDiscoverData();
+  return data.popularMovies;
 };
 
 export const getPopularTVShows = async (): Promise<SearchResult[]> => {
-  const data = await fetchFromTMDB<{
-    results: Omit<SearchResult, "media_type">[];
-  }>(`tv/popular`);
-  // Explicitly add media_type as it might be missing from this endpoint
-  return data.results.map((item) => ({ ...item, media_type: "tv" }));
+  const data = await fetchDiscoverData();
+  return data.popularTV;
 };
 
 export const getMovieDetails = async (id: number): Promise<MovieDetail> => {
