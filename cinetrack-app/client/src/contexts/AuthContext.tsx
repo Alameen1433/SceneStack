@@ -14,6 +14,7 @@ const API_BASE_URL = '';
 interface User {
     id: string;
     email: string;
+    isDemo?: boolean;
 }
 
 interface AuthContextType {

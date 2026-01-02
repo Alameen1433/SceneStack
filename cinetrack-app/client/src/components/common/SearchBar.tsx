@@ -4,14 +4,16 @@ interface SearchBarProps {
   onSearch: (query: string) => void;
   isLoading: boolean;
   isExpanded?: boolean;
+  defaultValue?: string;
 }
 
 export const SearchBar: React.FC<SearchBarProps> = ({
   onSearch,
   isLoading,
   isExpanded,
+  defaultValue = "",
 }) => {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(defaultValue);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -19,6 +21,10 @@ export const SearchBar: React.FC<SearchBarProps> = ({
       inputRef.current?.focus();
     }
   }, [isExpanded]);
+
+  useEffect(() => {
+    setQuery(defaultValue);
+  }, [defaultValue]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

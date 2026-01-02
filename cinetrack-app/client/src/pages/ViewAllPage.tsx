@@ -1,8 +1,9 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { MediaCard } from "../components/media/MediaCard";
-import { useWatchlistIds, useProgressMap } from "../contexts/WatchlistContext";
+import { useWatchlistIds, useProgressMap } from "../store/useWatchlistStore";
 import { useUIContext } from "../contexts/UIContext";
-import type { Media, WatchlistItem } from "../types/types";
+import type { WatchlistItem } from "../types/types";
 import type { WatchlistStatus } from "../services/dbService";
 import { getWatchlistByStatus } from "../services/dbService";
 import { FiArrowLeft, FiChevronLeft, FiChevronRight } from "react-icons/fi";
@@ -11,32 +12,40 @@ const ITEMS_PER_PAGE_MOBILE = 20;
 const ITEMS_PER_PAGE_DESKTOP = 24;
 const MAX_CACHED_PAGES = 3;
 
-interface ViewAllPageProps {
-    title: string;
-    items: Media[];
-    status?: WatchlistStatus;
-    onClose: () => void;
-}
+const STATUS_TITLES: Record<WatchlistStatus, string> = {
+    watchlist: "My Watchlist",
+    watching: "Currently Watching",
+    watched: "Watched",
+};
 
-export const ViewAllPage: React.FC<ViewAllPageProps> = ({
-    title,
-    items: initialItems,
-    status,
-    onClose,
-}) => {
+export const ViewAllPage: React.FC = () => {
+    const { status } = useParams<{ status: string }>();
+    const navigate = useNavigate();
     const watchlistIds = useWatchlistIds();
     const progressMap = useProgressMap();
     const { handleSelectMedia, selectedMediaId } = useUIContext();
     const [currentPage, setCurrentPage] = useState(1);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [windowWidth, setWindowWidth] = useState(
         typeof window !== "undefined" ? window.innerWidth : 1024
     );
 
     const pageCache = useRef<Map<number, WatchlistItem[]>>(new Map());
     const pageOrder = useRef<number[]>([]);
-    const [displayItems, setDisplayItems] = useState<Media[]>(initialItems);
-    const [totalItems, setTotalItems] = useState(initialItems.length);
+    const [displayItems, setDisplayItems] = useState<WatchlistItem[]>([]);
+    const [totalItems, setTotalItems] = useState(0);
+
+    const validStatus = (["watchlist", "watching", "watched"] as const).includes(
+        status as WatchlistStatus
+    )
+        ? (status as WatchlistStatus)
+        : null;
+
+    useEffect(() => {
+        if (!validStatus) {
+            navigate("/lists", { replace: true });
+        }
+    }, [validStatus, navigate]);
 
     useEffect(() => {
         const handleResize = () => setWindowWidth(window.innerWidth);
@@ -44,18 +53,19 @@ export const ViewAllPage: React.FC<ViewAllPageProps> = ({
         return () => window.removeEventListener("resize", handleResize);
     }, []);
 
-    const itemsPerPage = useMemo(() =>
-        windowWidth >= 640 ? ITEMS_PER_PAGE_DESKTOP : ITEMS_PER_PAGE_MOBILE
-        , [windowWidth]);
+    const itemsPerPage = useMemo(
+        () => (windowWidth >= 640 ? ITEMS_PER_PAGE_DESKTOP : ITEMS_PER_PAGE_MOBILE),
+        [windowWidth]
+    );
 
-    const totalPages = useMemo(() => {
-        if (!status) return Math.ceil(initialItems.length / itemsPerPage);
-        return Math.ceil(totalItems / itemsPerPage);
-    }, [status, initialItems.length, itemsPerPage, totalItems]);
+    const totalPages = useMemo(
+        () => Math.ceil(totalItems / itemsPerPage),
+        [totalItems, itemsPerPage]
+    );
 
     const addToCache = useCallback((page: number, items: WatchlistItem[]) => {
         if (pageCache.current.has(page)) {
-            pageOrder.current = pageOrder.current.filter(p => p !== page);
+            pageOrder.current = pageOrder.current.filter((p) => p !== page);
         }
         pageCache.current.set(page, items);
         pageOrder.current.push(page);
@@ -68,38 +78,36 @@ export const ViewAllPage: React.FC<ViewAllPageProps> = ({
         }
     }, []);
 
-    const fetchPage = useCallback(async (page: number) => {
-        if (!status) return;
+    const fetchPage = useCallback(
+        async (page: number) => {
+            if (!validStatus) return;
 
-        if (pageCache.current.has(page)) {
-            setDisplayItems(pageCache.current.get(page) || []);
-            return;
-        }
+            if (pageCache.current.has(page)) {
+                setDisplayItems(pageCache.current.get(page) || []);
+                setIsLoading(false);
+                return;
+            }
 
-        setIsLoading(true);
-        try {
-            const response = await getWatchlistByStatus(status, page, itemsPerPage);
-            addToCache(page, response.items);
-            setDisplayItems(response.items);
-            setTotalItems(response.totalCount);
-        } catch (err) {
-            console.error("Failed to fetch page:", err);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [status, itemsPerPage, addToCache]);
+            setIsLoading(true);
+            try {
+                const response = await getWatchlistByStatus(validStatus, page, itemsPerPage);
+                addToCache(page, response.items);
+                setDisplayItems(response.items);
+                setTotalItems(response.totalCount);
+            } catch (err) {
+                console.error("Failed to fetch page:", err);
+            } finally {
+                setIsLoading(false);
+            }
+        },
+        [validStatus, itemsPerPage, addToCache]
+    );
 
     useEffect(() => {
-        if (status) {
+        if (validStatus) {
             fetchPage(currentPage);
         }
-    }, [currentPage, status, fetchPage]);
-
-    const paginatedItems = useMemo(() => {
-        if (status) return displayItems;
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        return initialItems.slice(startIndex, startIndex + itemsPerPage);
-    }, [status, displayItems, initialItems, currentPage, itemsPerPage]);
+    }, [currentPage, validStatus, fetchPage]);
 
     const handlePrevPage = useCallback(() => {
         setCurrentPage((prev) => Math.max(1, prev - 1));
@@ -112,10 +120,14 @@ export const ViewAllPage: React.FC<ViewAllPageProps> = ({
         window.scrollTo({ top: 0, behavior: "smooth" });
     }, [currentPage, totalPages]);
 
+    const handleClose = useCallback(() => {
+        navigate("/lists");
+    }, [navigate]);
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
-                onClose();
+                handleClose();
             } else if (e.key === "ArrowLeft" && currentPage > 1) {
                 handlePrevPage();
             } else if (e.key === "ArrowRight" && currentPage < totalPages) {
@@ -124,8 +136,13 @@ export const ViewAllPage: React.FC<ViewAllPageProps> = ({
         };
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [onClose, currentPage, totalPages, handlePrevPage, handleNextPage]);
+    }, [handleClose, currentPage, totalPages, handlePrevPage, handleNextPage]);
 
+    if (!validStatus) {
+        return null;
+    }
+
+    const title = STATUS_TITLES[validStatus];
     const showPagination = totalPages > 1;
     const canGoNext = currentPage < totalPages;
 
@@ -135,19 +152,15 @@ export const ViewAllPage: React.FC<ViewAllPageProps> = ({
                 <div className="flex items-center justify-between px-4 sm:px-6 py-4">
                     <div className="flex items-center gap-4">
                         <button
-                            onClick={onClose}
+                            onClick={handleClose}
                             className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
                             aria-label="Go back"
                         >
                             <FiArrowLeft className="h-6 w-6 text-brand-text-light" />
                         </button>
                         <div>
-                            <h1 className="text-xl sm:text-2xl font-bold text-brand-text-light">
-                                {title}
-                            </h1>
-                            <p className="text-sm text-brand-text-dim">
-                                {totalItems} items
-                            </p>
+                            <h1 className="text-xl sm:text-2xl font-bold text-brand-text-light">{title}</h1>
+                            <p className="text-sm text-brand-text-dim">{totalItems} items</p>
                         </div>
                     </div>
 
@@ -162,7 +175,7 @@ export const ViewAllPage: React.FC<ViewAllPageProps> = ({
                                 <FiChevronLeft className="h-5 w-5 text-brand-text-light" />
                             </button>
                             <span className="text-brand-text-light font-medium min-w-[80px] text-center">
-                                Page {currentPage}{status ? '' : ` of ${totalPages}`}
+                                Page {currentPage}
                             </span>
                             <button
                                 onClick={handleNextPage}
@@ -184,7 +197,7 @@ export const ViewAllPage: React.FC<ViewAllPageProps> = ({
                     </div>
                 ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
-                        {paginatedItems.map((item) => (
+                        {displayItems.map((item) => (
                             <MediaCard
                                 key={`${item.media_type}-${item.id}`}
                                 media={item}
@@ -199,7 +212,8 @@ export const ViewAllPage: React.FC<ViewAllPageProps> = ({
             </main>
 
             {showPagination && (
-                <footer className="sm:hidden fixed bottom-0 left-0 right-0 flex items-center justify-center gap-4 p-4 bg-brand-bg/95 backdrop-blur-sm border-t border-white/10"
+                <footer
+                    className="sm:hidden fixed bottom-0 left-0 right-0 flex items-center justify-center gap-4 p-4 bg-brand-bg/95 backdrop-blur-sm border-t border-white/10"
                     style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
                 >
                     <button
@@ -211,7 +225,7 @@ export const ViewAllPage: React.FC<ViewAllPageProps> = ({
                         <span className="text-brand-text-light font-medium">Prev</span>
                     </button>
                     <span className="text-brand-text-light font-medium min-w-[80px] text-center">
-                        {currentPage}{status ? '' : ` / ${totalPages}`}
+                        {currentPage}
                     </span>
                     <button
                         onClick={handleNextPage}
@@ -226,4 +240,3 @@ export const ViewAllPage: React.FC<ViewAllPageProps> = ({
         </div>
     );
 };
-

@@ -1,7 +1,7 @@
 import React, { useState, memo, useMemo, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { MediaCard } from "../media/MediaCard";
 import { ShowMoreCard } from "./ShowMoreCard";
-import { useUIContext } from "../../contexts/UIContext";
 import type { Media } from "../../types/types";
 import type { WatchlistStatus } from "../../services/dbService";
 
@@ -18,22 +18,18 @@ interface MediaSectionProps {
     status?: WatchlistStatus;
 }
 
-// Responsive breakpoints matching Tailwind's grid columns
-// grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6
 const getColumnsForWidth = (width: number): number => {
-    if (width >= 1280) return 6; // xl
-    if (width >= 1024) return 5; // lg
-    if (width >= 768) return 4;  // md
-    if (width >= 640) return 3;  // sm
-    return 2;                     // default
+    if (width >= 1280) return 6;
+    if (width >= 1024) return 5;
+    if (width >= 768) return 4;
+    if (width >= 640) return 3;
+    return 2;
 };
 
-// Rows to show: 2 for mobile, 3 for larger screens (pagination mode)
 const getRowsForWidth = (width: number): number => {
     return width >= 640 ? 3 : 2;
 };
 
-// Rows to show for expand mode (Discover): always 3 rows
 const EXPAND_MODE_ROWS = 3;
 
 export const MediaSection: React.FC<MediaSectionProps> = memo(({
@@ -48,13 +44,12 @@ export const MediaSection: React.FC<MediaSectionProps> = memo(({
     enablePagination = false,
     status,
 }) => {
-    const { openViewAll } = useUIContext();
+    const navigate = useNavigate();
     const [isExpanded, setIsExpanded] = useState(false);
     const [windowWidth, setWindowWidth] = useState(
         typeof window !== "undefined" ? window.innerWidth : 1024
     );
 
-    // Track window width for responsive calculations
     useEffect(() => {
         const handleResize = () => setWindowWidth(window.innerWidth);
         window.addEventListener("resize", handleResize);
@@ -64,12 +59,10 @@ export const MediaSection: React.FC<MediaSectionProps> = memo(({
     const columns = useMemo(() => getColumnsForWidth(windowWidth), [windowWidth]);
     const rows = useMemo(() => getRowsForWidth(windowWidth), [windowWidth]);
 
-    // Calculate items to show based on mode
     const maxVisibleItems = useMemo(() => columns * rows, [columns, rows]);
 
     const { displayedItems, hasMoreItems, remainingCount } = useMemo(() => {
         if (enablePagination) {
-            // Pagination mode: show limited rows with ShowMoreCard
             const hasMore = items.length > maxVisibleItems;
             const itemsToShow = hasMore ? maxVisibleItems - 1 : items.length;
             return {
@@ -78,7 +71,6 @@ export const MediaSection: React.FC<MediaSectionProps> = memo(({
                 remainingCount: items.length - itemsToShow,
             };
         } else {
-            // Expand mode: show 3 rows based on viewport with expand button
             const expandModeItems = columns * EXPAND_MODE_ROWS;
             const hasMore = items.length > expandModeItems;
             return {
@@ -90,8 +82,10 @@ export const MediaSection: React.FC<MediaSectionProps> = memo(({
     }, [enablePagination, items, maxVisibleItems, isExpanded, columns]);
 
     const handleViewAll = useCallback(() => {
-        openViewAll(title, items, status);
-    }, [openViewAll, title, items, status]);
+        if (status) {
+            navigate(`/lists/${status}`);
+        }
+    }, [navigate, status]);
 
     const handleToggleExpand = useCallback(() => {
         setIsExpanded(prev => !prev);
@@ -113,7 +107,6 @@ export const MediaSection: React.FC<MediaSectionProps> = memo(({
                                 isDimmed={selectedMediaId === `${item.media_type}-${item.id}`}
                             />
                         ))}
-                        {/* Pagination mode: Show arrow card inline */}
                         {enablePagination && hasMoreItems && (
                             <ShowMoreCard
                                 remainingCount={remainingCount}
@@ -121,7 +114,6 @@ export const MediaSection: React.FC<MediaSectionProps> = memo(({
                             />
                         )}
                     </div>
-                    {/* Expand mode: Show More/Less button below grid */}
                     {!enablePagination && hasMoreItems && (
                         <div className="text-center mt-8">
                             <button
@@ -146,4 +138,3 @@ export const MediaSection: React.FC<MediaSectionProps> = memo(({
 });
 
 MediaSection.displayName = "MediaSection";
-

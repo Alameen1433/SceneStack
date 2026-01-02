@@ -4,6 +4,7 @@ const { asyncHandler, AppError } = require("../middleware/errorHandler");
 const { validate } = require("../middleware/validate");
 const { watchlistItemSchema, watchlistImportSchema } = require("../validation/schemas");
 const { cache } = require("../config");
+const { ObjectId } = require("mongodb");
 
 const router = express.Router();
 
@@ -37,13 +38,22 @@ const computeWatchlistStatus = (item) => {
     return "watching";
 };
 
-module.exports = (watchlistCollection, broadcastToUser, client) => {
+module.exports = (watchlistCollection, demoWatchlistCollection, broadcastToUser, client, usersCollection, demoUsersCollection) => {
+    const getWatchlistCollection = async (userId) => {
+        const demoUser = await demoUsersCollection.findOne({ _id: new ObjectId(userId) });
+        if (demoUser) {
+            return { collection: demoWatchlistCollection, isDemo: true };
+        }
+        return { collection: watchlistCollection, isDemo: false };
+    };
+
     // GET /api/watchlist
     router.get(
         "/",
         authMiddleware,
         asyncHandler(async (req, res) => {
-            const items = await watchlistCollection
+            const { collection } = await getWatchlistCollection(req.userId);
+            const items = await collection
                 .find({ userId: req.userId })
                 .sort({ _id: -1 })
                 .toArray();
@@ -56,8 +66,9 @@ module.exports = (watchlistCollection, broadcastToUser, client) => {
         "/stats",
         authMiddleware,
         asyncHandler(async (req, res) => {
-            const userItemCount = await watchlistCollection.countDocuments({ userId: req.userId });
-            const totalDocuments = await watchlistCollection.countDocuments();
+            const { collection, isDemo } = await getWatchlistCollection(req.userId);
+            const userItemCount = await collection.countDocuments({ userId: req.userId });
+            const totalDocuments = await collection.countDocuments();
             const db = client.db("scenestackDB");
 
             let dbStats = null;
@@ -68,7 +79,7 @@ module.exports = (watchlistCollection, broadcastToUser, client) => {
             }
 
             res.json({
-                user: { itemCount: userItemCount },
+                user: { itemCount: userItemCount, isDemo },
                 collection: {
                     totalDocuments,
                     storageSize: dbStats?.storageSize || 0,
@@ -87,6 +98,7 @@ module.exports = (watchlistCollection, broadcastToUser, client) => {
         "/recommendations",
         authMiddleware,
         asyncHandler(async (req, res) => {
+            const { collection } = await getWatchlistCollection(req.userId);
             const refresh = req.query.refresh === "true";
             const cacheKey = `user:recommendations:${req.userId}`;
 
@@ -98,7 +110,7 @@ module.exports = (watchlistCollection, broadcastToUser, client) => {
                 }
             }
 
-            const watchlist = await watchlistCollection
+            const watchlist = await collection
                 .find({ userId: req.userId })
                 .toArray();
 
@@ -148,12 +160,13 @@ module.exports = (watchlistCollection, broadcastToUser, client) => {
         "/:id",
         authMiddleware,
         asyncHandler(async (req, res) => {
+            const { collection } = await getWatchlistCollection(req.userId);
             const id = parseInt(req.params.id, 10);
             if (isNaN(id)) {
                 throw new AppError("Invalid ID format.", 400);
             }
 
-            const item = await watchlistCollection.findOne({ id, userId: req.userId });
+            const item = await collection.findOne({ id, userId: req.userId });
             if (!item) {
                 throw new AppError("Item not found.", 404);
             }
@@ -167,13 +180,19 @@ module.exports = (watchlistCollection, broadcastToUser, client) => {
         authMiddleware,
         validate(watchlistItemSchema),
         asyncHandler(async (req, res) => {
+            const { collection } = await getWatchlistCollection(req.userId);
             const item = req.body;
 
             const { _id, ...itemWithoutId } = item;
             const watchlistStatus = computeWatchlistStatus(itemWithoutId);
-            const itemWithUser = { ...itemWithoutId, userId: req.userId, watchlistStatus };
+            const itemWithUser = {
+                ...itemWithoutId,
+                userId: req.userId,
+                watchlistStatus,
+                createdAt: new Date()
+            };
 
-            await watchlistCollection.replaceOne(
+            await collection.replaceOne(
                 { id: item.id, userId: req.userId },
                 itemWithUser,
                 { upsert: true }
@@ -189,12 +208,13 @@ module.exports = (watchlistCollection, broadcastToUser, client) => {
         "/:id",
         authMiddleware,
         asyncHandler(async (req, res) => {
+            const { collection } = await getWatchlistCollection(req.userId);
             const id = parseInt(req.params.id, 10);
             if (isNaN(id)) {
                 throw new AppError("Invalid ID format.", 400);
             }
 
-            const result = await watchlistCollection.deleteOne({ id, userId: req.userId });
+            const result = await collection.deleteOne({ id, userId: req.userId });
             if (result.deletedCount !== 1) {
                 throw new AppError("Item not found.", 404);
             }
@@ -209,16 +229,24 @@ module.exports = (watchlistCollection, broadcastToUser, client) => {
         "/",
         authMiddleware,
         asyncHandler(async (req, res) => {
-            await watchlistCollection.deleteMany({ userId: req.userId });
+            const { collection } = await getWatchlistCollection(req.userId);
+            await collection.deleteMany({ userId: req.userId });
             broadcastToUser(req.userId, "watchlist:sync", { trigger: "wipe" });
             res.status(204).send();
         })
     );
 
-    // POST /api/watchlist/import
+    // POST /api/watchlist/import (blocked for demo users)
     router.post(
         "/import",
         authMiddleware,
+        asyncHandler(async (req, res, next) => {
+            const { isDemo } = await getWatchlistCollection(req.userId);
+            if (isDemo) {
+                throw new AppError("Demo accounts cannot import watchlists", 403);
+            }
+            next();
+        }),
         validate(watchlistImportSchema),
         asyncHandler(async (req, res) => {
             const items = req.body;
@@ -229,7 +257,8 @@ module.exports = (watchlistCollection, broadcastToUser, client) => {
                 const itemsWithUser = items.map((item) => ({
                     ...item,
                     userId: req.userId,
-                    watchlistStatus: computeWatchlistStatus(item)
+                    watchlistStatus: computeWatchlistStatus(item),
+                    createdAt: new Date()
                 }));
                 await watchlistCollection.insertMany(itemsWithUser);
             }
@@ -244,6 +273,7 @@ module.exports = (watchlistCollection, broadcastToUser, client) => {
         "/by-status/:status",
         authMiddleware,
         asyncHandler(async (req, res) => {
+            const { collection } = await getWatchlistCollection(req.userId);
             const { status } = req.params;
             const validStatuses = ["watchlist", "watching", "watched"];
             if (!validStatuses.includes(status)) {
@@ -257,13 +287,13 @@ module.exports = (watchlistCollection, broadcastToUser, client) => {
             const query = { userId: req.userId, watchlistStatus: status };
 
             const [items, totalCount] = await Promise.all([
-                watchlistCollection
+                collection
                     .find(query)
                     .sort({ _id: -1 })
                     .skip(skip)
                     .limit(limit + 1)
                     .toArray(),
-                watchlistCollection.countDocuments(query)
+                collection.countDocuments(query)
             ]);
 
             const hasMore = items.length > limit;
@@ -275,4 +305,3 @@ module.exports = (watchlistCollection, broadcastToUser, client) => {
 
     return router;
 };
-

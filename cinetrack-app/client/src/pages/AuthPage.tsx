@@ -20,8 +20,8 @@ const PasswordInput: React.FC<{
                 onChange={(e) => onChange(e.target.value)}
                 onBlur={onBlur}
                 className={`w-full px-4 py-3 pr-12 bg-black/40 border rounded-lg text-white placeholder:text-brand-text-muted focus:outline-none focus:ring-1 transition-all ${hasError
-                        ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/30"
-                        : "border-white/5 focus:border-brand-primary/50 focus:ring-brand-primary/30"
+                    ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/30"
+                    : "border-white/5 focus:border-brand-primary/50 focus:ring-brand-primary/30"
                     }`}
             />
             <button
@@ -150,10 +150,10 @@ export const AuthPage: React.FC = () => {
 
     return (
         <div
-            className="min-h-screen bg-brand-bg flex items-center justify-center p-4 overflow-hidden"
+            className="min-h-screen bg-brand-bg flex items-center justify-center p-4 py-8"
             onMouseMove={handleMouseMove}
         >
-            <div className="absolute inset-0 overflow-hidden">
+            <div className="fixed inset-0 pointer-events-none overflow-hidden">
                 <div className="absolute inset-0 animate-gradient-slow bg-gradient-radial will-change-[background-position]" />
                 <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand-primary/20 rounded-full blur-[120px] animate-float-slow will-change-transform" />
                 <div className="hidden sm:block absolute bottom-0 right-1/4 w-80 h-80 bg-brand-secondary/15 rounded-full blur-[100px] animate-float-reverse will-change-transform" />
@@ -206,7 +206,7 @@ export const AuthPage: React.FC = () => {
                     {/* Error Message */}
                     {error && (
                         <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-xl flex items-start gap-2 animate-shake">
-                            <FiAlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+                            <FiAlertCircle className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
                             <p className="text-red-400 text-sm">{error}</p>
                         </div>
                     )}
@@ -250,24 +250,39 @@ export const AuthPage: React.FC = () => {
                         </div>
 
                         {mode === "register" && (
-                            <div className="animate-slideDown">
-                                <label htmlFor="inviteCode" className="block text-sm text-brand-text-dim mb-2">
-                                    Invite Code
-                                </label>
-                                <input
-                                    id="inviteCode"
-                                    type="text"
-                                    value={inviteCode}
-                                    onChange={(e) => handleInviteCodeChange(e.target.value)}
-                                    onBlur={() => handleBlur("inviteCode")}
-                                    className={`w-full px-4 py-3 bg-black/40 border rounded-lg text-white placeholder:text-brand-text-muted focus:outline-none focus:ring-1 transition-all ${fieldErrors.inviteCode && touched.inviteCode
-                                        ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/30"
-                                        : "border-white/5 focus:border-brand-primary/50 focus:ring-brand-primary/30"
-                                        }`}
-                                />
-                                {fieldErrors.inviteCode && touched.inviteCode && (
-                                    <p className="text-red-400 text-xs mt-1">{fieldErrors.inviteCode}</p>
-                                )}
+                            <div className="animate-slideDown space-y-3">
+                                <div>
+                                    <label htmlFor="inviteCode" className="block text-sm text-brand-text-dim mb-2">
+                                        Invite Code
+                                    </label>
+                                    <input
+                                        id="inviteCode"
+                                        type="text"
+                                        value={inviteCode}
+                                        onChange={(e) => handleInviteCodeChange(e.target.value)}
+                                        onBlur={() => handleBlur("inviteCode")}
+                                        className={`w-full px-4 py-3 bg-black/40 border rounded-lg text-white placeholder:text-brand-text-muted focus:outline-none focus:ring-1 transition-all ${fieldErrors.inviteCode && touched.inviteCode
+                                            ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/30"
+                                            : "border-white/5 focus:border-brand-primary/50 focus:ring-brand-primary/30"
+                                            }`}
+                                    />
+                                    {fieldErrors.inviteCode && touched.inviteCode && (
+                                        <p className="text-red-400 text-xs mt-1">{fieldErrors.inviteCode}</p>
+                                    )}
+                                </div>
+
+                                {/* Invite code explanation */}
+                                <p className="text-xs text-brand-text-muted">
+                                    SceneStack is a personal project. Invite codes keep this instance private.
+                                </p>
+
+                                {/* Demo hint */}
+                                <div className="bg-brand-primary/10 border border-brand-primary/20 rounded-lg p-3">
+                                    <p className="text-sm text-brand-primary">
+                                        <span className="font-medium">Want to try it out?</span>{" "}
+                                        Use demo code: <code className="bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">DEMONOW</code>
+                                    </p>
+                                </div>
                             </div>
                         )}
 
@@ -309,7 +324,7 @@ export const AuthPage: React.FC = () => {
                     </p>
                 </div>
 
-                <div className="absolute -z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[102%] h-[102%] bg-gradient-to-b from-brand-primary/20 via-transparent to-transparent rounded-2xl blur-sm" />
+                <div className="absolute -z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[102%] h-[102%] bg-linear-to-b from-brand-primary/20 via-transparent to-transparent rounded-2xl blur-sm" />
             </div>
 
             {/* CSS Animations */}

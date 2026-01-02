@@ -30,7 +30,6 @@ export default defineConfig({
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'scheduler'],
           'socket': ['socket.io-client'],
-          'context-selector': ['use-context-selector'],
         },
       },
     },

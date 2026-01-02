@@ -619,3 +619,66 @@ export const calculateWatchStats = (
         },
     };
 };
+
+// ============================================================================
+// INITIALIZATION HOOK - Call this once at app root
+// ============================================================================
+
+import { useEffect, useMemo } from 'react';
+
+export const useWatchlistInit = () => {
+    const loadWatchlist = useWatchlistStore(state => state.loadWatchlist);
+    const syncItem = useWatchlistStore(state => state.syncItem);
+    const deleteItem = useWatchlistStore(state => state.deleteItem);
+
+    useEffect(() => {
+        loadWatchlist();
+
+        return () => {
+            socketService.disconnect();
+        };
+    }, [loadWatchlist]);
+
+    useEffect(() => {
+        const unsubUpdate = socketService.onUpdate((item) => {
+            syncItem(item);
+        });
+
+        const unsubDelete = socketService.onDelete(({ id }) => {
+            deleteItem(id);
+        });
+
+        const unsubSync = socketService.onSync(() => {
+            loadWatchlist();
+        });
+
+        return () => {
+            unsubUpdate();
+            unsubDelete();
+            unsubSync();
+        };
+    }, [syncItem, deleteItem, loadWatchlist]);
+};
+
+// ============================================================================
+// SELECTOR HOOKS - Use these for optimized subscriptions
+// ============================================================================
+
+export const useWatchlistIds = () => {
+    const watchlist = useWatchlistStore(state => state.watchlist);
+    return useMemo(() => getWatchlistIds(watchlist), [watchlist]);
+};
+
+export const useWatchlistLoading = (): boolean => {
+    return useWatchlistStore(state => state.isLoading);
+};
+
+export const useWatchlist = (): WatchlistItem[] => {
+    return useWatchlistStore(state => state.watchlist);
+};
+
+export const useProgressMap = () => {
+    const watchlist = useWatchlistStore(state => state.watchlist);
+    const { currentlyWatchingItems } = useMemo(() => getFilteredItems(watchlist, null), [watchlist]);
+    return useMemo(() => getProgressMap(currentlyWatchingItems), [currentlyWatchingItems]);
+};

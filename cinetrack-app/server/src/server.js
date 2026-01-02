@@ -116,6 +116,8 @@ const client = new MongoClient(config.mongo.uri, {
 
 let watchlistCollection;
 let usersCollection;
+let demoUsersCollection;
+let demoWatchlistCollection;
 
 async function connectToDb() {
   try {
@@ -123,12 +125,27 @@ async function connectToDb() {
     const db = client.db("scenestackDB");
     watchlistCollection = db.collection("watchlist");
     usersCollection = db.collection("users");
+    demoUsersCollection = db.collection("demoUsers");
+    demoWatchlistCollection = db.collection("demoWatchlist");
     console.log("Successfully connected to MongoDB.");
 
-    // Create indexes
+    // Create indexes for production collections
     await watchlistCollection.createIndex({ userId: 1, id: 1 }, { unique: true });
     await watchlistCollection.createIndex({ userId: 1, watchlistStatus: 1 });
     await usersCollection.createIndex({ email: 1 }, { unique: true });
+
+    // Create indexes for demo collections with TTL for auto-cleanup
+    await demoUsersCollection.createIndex({ email: 1 }, { unique: true });
+    await demoUsersCollection.createIndex(
+      { createdAt: 1 },
+      { expireAfterSeconds: config.demoTtlSeconds }
+    );
+    await demoWatchlistCollection.createIndex({ userId: 1, id: 1 }, { unique: true });
+    await demoWatchlistCollection.createIndex(
+      { createdAt: 1 },
+      { expireAfterSeconds: config.demoTtlSeconds }
+    );
+    console.log(`Demo TTL indexes created (${config.demoTtlSeconds}s)`);
   } catch (err) {
     console.error("Failed to connect to MongoDB:", err.message);
     process.exit(1);
@@ -150,13 +167,19 @@ client.on("timeout", () => {
 
 // --- Auth Routes ---
 app.use("/api/auth", authLimiter, (req, res, next) => {
-  req.usersCollection = usersCollection;
-  authRoutes(usersCollection)(req, res, next);
+  authRoutes(usersCollection, demoUsersCollection)(req, res, next);
 });
 
 // --- Watchlist Routes ---
 app.use("/api/watchlist", (req, res, next) => {
-  watchlistRoutes(watchlistCollection, broadcastToUser, client)(req, res, next);
+  watchlistRoutes(
+    watchlistCollection,
+    demoWatchlistCollection,
+    broadcastToUser,
+    client,
+    usersCollection,
+    demoUsersCollection
+  )(req, res, next);
 });
 
 // --- TMDB Proxy Routes ---

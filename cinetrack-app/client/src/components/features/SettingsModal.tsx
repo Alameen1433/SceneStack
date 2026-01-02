@@ -16,7 +16,8 @@ import {
   FiTrash2,
   FiAlertTriangle,
   FiChevronRight,
-  FiChevronDown
+  FiChevronDown,
+  FiClock
 } from "react-icons/fi";
 
 // API requests use relative URLs - Vite proxy handles forwarding in dev
@@ -312,17 +313,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </h3>
             <div className="bg-black/30 rounded-xl p-4">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary flex items-center justify-center text-white text-lg font-bold">
+                <div className="w-12 h-12 rounded-full bg-linear-to-br from-brand-primary to-brand-secondary flex items-center justify-center text-white text-lg font-bold">
                   {user?.email?.charAt(0).toUpperCase() || "U"}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-white font-medium truncate">{user?.email}</p>
-                  <p className="text-sm text-brand-text-dim">Logged in</p>
+                  <p className="text-sm text-brand-text-dim">
+                    {user?.isDemo ? "Demo Account" : "Logged in"}
+                  </p>
                 </div>
               </div>
 
-              {/* Change Password Toggle */}
-              {!showPasswordForm ? (
+              {/* Demo Account Badge */}
+              {user?.isDemo && (
+                <div className="mt-4 bg-amber-500/15 border border-amber-500/30 rounded-lg p-3">
+                  <p className="text-amber-400 font-medium flex items-center gap-2 text-sm">
+                    <FiClock className="h-4 w-4" />
+                    Demo Account
+                  </p>
+                  <p className="text-xs text-brand-text-dim mt-1">
+                    This account expires automatically. Some features are limited.
+                  </p>
+                </div>
+              )}
+
+              {/* Change Password Toggle - hidden for demo users */}
+              {!user?.isDemo && !showPasswordForm ? (
                 <button
                   onClick={() => { setShowPasswordForm(true); setPasswordSuccess(false); }}
                   className="w-full mt-4 py-2 px-4 rounded-lg font-medium transition-colors bg-white/10 hover:bg-white/20 text-white flex items-center justify-center gap-2"
@@ -335,13 +351,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   {/* Status Messages */}
                   {passwordError && (
                     <div className="flex items-start gap-2 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
-                      <FiAlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+                      <FiAlertCircle className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
                       <p className="text-red-400 text-sm">{passwordError}</p>
                     </div>
                   )}
                   {passwordSuccess && (
                     <div className="flex items-start gap-2 p-3 bg-green-500/20 border border-green-500/30 rounded-lg">
-                      <FiCheckCircle className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+                      <FiCheckCircle className="h-5 w-5 text-green-400 shrink-0 mt-0.5" />
                       <div>
                         <p className="text-green-400 text-sm font-medium">Password updated successfully!</p>
                         <p className="text-green-400/70 text-xs mt-1">Your new password is now active. Use it the next time you log in.</p>
@@ -434,17 +450,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <p className="text-sm text-brand-text-dim mb-4">
               Export your watchlist to a file for backup, or import from a previous export.
             </p>
+            {user?.isDemo && (
+              <p className="text-xs text-amber-400/80 mb-3">
+                Export/Import is disabled for demo accounts.
+              </p>
+            )}
             <div className="flex flex-col sm:flex-row gap-3">
               <button
-                onClick={onExport}
-                className="flex-1 py-2.5 px-4 rounded-xl font-semibold transition-all bg-brand-primary hover:bg-brand-secondary text-white flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
+                onClick={user?.isDemo ? undefined : onExport}
+                disabled={user?.isDemo}
+                className={`flex-1 py-2.5 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${user?.isDemo
+                    ? "bg-white/5 text-brand-text-dim cursor-not-allowed"
+                    : "bg-brand-primary hover:bg-brand-secondary text-white hover:scale-[1.02] active:scale-[0.98]"
+                  }`}
               >
                 <FiDownload className="h-5 w-5" />
                 Export
               </button>
               <button
-                onClick={handleImportClick}
-                className="flex-1 py-2.5 px-4 rounded-xl font-semibold transition-all bg-white/10 hover:bg-white/20 text-white flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
+                onClick={user?.isDemo ? undefined : handleImportClick}
+                disabled={user?.isDemo}
+                className={`flex-1 py-2.5 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${user?.isDemo
+                    ? "bg-white/5 text-brand-text-dim cursor-not-allowed"
+                    : "bg-white/10 hover:bg-white/20 text-white hover:scale-[1.02] active:scale-[0.98]"
+                  }`}
               >
                 <FiUpload className="h-5 w-5" />
                 Import
@@ -460,55 +489,57 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </section>
 
-          {/* Storage Stats */}
-          <section className="pt-4 border-t border-white/10">
-            <button
-              onClick={() => setIsDangerZoneExpanded(!isDangerZoneExpanded)}
-              className="w-full flex items-center justify-between text-left mb-3 group"
-            >
-              <h3 className="text-sm font-semibold text-white flex items-center gap-2 group-hover:text-red-400 transition-colors">
-                <FiAlertTriangle className="h-4 w-4 text-red-500" />
-                Danger Zone
-              </h3>
-              {isDangerZoneExpanded ? (
-                <FiChevronDown className="h-4 w-4 text-brand-text-dim" />
-              ) : (
-                <FiChevronRight className="h-4 w-4 text-brand-text-dim" />
-              )}
-            </button>
+          {/* Danger Zone - hidden for demo users (auto-deleted) */}
+          {!user?.isDemo && (
+            <section className="pt-4 border-t border-white/10">
+              <button
+                onClick={() => setIsDangerZoneExpanded(!isDangerZoneExpanded)}
+                className="w-full flex items-center justify-between text-left mb-3 group"
+              >
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2 group-hover:text-red-400 transition-colors">
+                  <FiAlertTriangle className="h-4 w-4 text-red-500" />
+                  Danger Zone
+                </h3>
+                {isDangerZoneExpanded ? (
+                  <FiChevronDown className="h-4 w-4 text-brand-text-dim" />
+                ) : (
+                  <FiChevronRight className="h-4 w-4 text-brand-text-dim" />
+                )}
+              </button>
 
-            {isDangerZoneExpanded && (
-              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 animate-fadeIn">
-                <p className="text-sm text-brand-text-dim mb-4">
-                  These actions are permanent and cannot be undone.
-                </p>
-                <div className="flex flex-col gap-3">
-                  <button
-                    onClick={() => {
-                      setDangerAction("wipe");
-                      setShowDangerConfirm(true);
-                      setConfirmationText("");
-                    }}
-                    className="w-full py-2.5 px-4 rounded-lg font-semibold transition-colors bg-red-500/80 hover:bg-red-600 text-white flex items-center justify-center gap-2"
-                  >
-                    <FiTrash2 className="h-4 w-4" />
-                    Wipe Watchlist
-                  </button>
-                  <button
-                    onClick={() => {
-                      setDangerAction("delete");
-                      setShowDangerConfirm(true);
-                      setConfirmationText("");
-                    }}
-                    className="w-full py-2.5 px-4 rounded-lg font-semibold transition-colors bg-white/5 hover:bg-red-500/20 text-red-500 border border-red-500/30 hover:border-red-500/50 flex items-center justify-center gap-2"
-                  >
-                    <FiTrash2 className="h-4 w-4" />
-                    Delete Account
-                  </button>
+              {isDangerZoneExpanded && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 animate-fadeIn">
+                  <p className="text-sm text-brand-text-dim mb-4">
+                    These actions are permanent and cannot be undone.
+                  </p>
+                  <div className="flex flex-col gap-3">
+                    <button
+                      onClick={() => {
+                        setDangerAction("wipe");
+                        setShowDangerConfirm(true);
+                        setConfirmationText("");
+                      }}
+                      className="w-full py-2.5 px-4 rounded-lg font-semibold transition-colors bg-red-500/80 hover:bg-red-600 text-white flex items-center justify-center gap-2"
+                    >
+                      <FiTrash2 className="h-4 w-4" />
+                      Wipe Watchlist
+                    </button>
+                    <button
+                      onClick={() => {
+                        setDangerAction("delete");
+                        setShowDangerConfirm(true);
+                        setConfirmationText("");
+                      }}
+                      className="w-full py-2.5 px-4 rounded-lg font-semibold transition-colors bg-white/5 hover:bg-red-500/20 text-red-500 border border-red-500/30 hover:border-red-500/50 flex items-center justify-center gap-2"
+                    >
+                      <FiTrash2 className="h-4 w-4" />
+                      Delete Account
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </section>
+              )}
+            </section>
+          )}
 
           <StorageStats />
 
@@ -539,7 +570,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       {/* Danger Confirmation Modal - Nested */}
       {showDangerConfirm && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="bg-brand-surface border border-red-500/30 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-fadeIn">
