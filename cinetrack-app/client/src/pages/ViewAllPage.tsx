@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MediaCard } from "../components/media/MediaCard";
-import { useWatchlistIds, useProgressMap } from "../contexts/WatchlistContext";
+import { useWatchlistIds, useProgressMap } from "../store/useWatchlistStore";
 import { useUIContext } from "../contexts/UIContext";
 import type { WatchlistItem } from "../types/types";
 import type { WatchlistStatus } from "../services/dbService";

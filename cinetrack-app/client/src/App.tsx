@@ -1,14 +1,19 @@
 import React, { Suspense, lazy } from "react";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
-import { WatchlistProvider } from "./contexts/WatchlistContext";
 import { UIProvider } from "./contexts/UIContext";
 import { DiscoverProvider } from "./contexts/DiscoverContext";
 import { AuthProvider, useAuthContext } from "./contexts/AuthContext";
 import { DemoWelcomeModal, useDemoWelcome } from "./components/common/DemoWelcomeModal";
 import { RouterProvider } from "react-router-dom";
 import { router } from "./router";
+import { useWatchlistInit } from "./store/useWatchlistStore";
 
 const AuthPage = lazy(() => import("./pages/AuthPage").then((m) => ({ default: m.AuthPage })));
+
+const WatchlistInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  useWatchlistInit();
+  return <>{children}</>;
+};
 
 const AuthenticatedApp: React.FC = () => {
   const { isAuthenticated, isLoading, user } = useAuthContext();
@@ -43,13 +48,13 @@ const AuthenticatedApp: React.FC = () => {
 
   return (
     <div className="animate-fadeIn">
-      <WatchlistProvider>
+      <WatchlistInitializer>
         <UIProvider>
           <DiscoverProvider>
             <RouterProvider router={router} />
           </DiscoverProvider>
         </UIProvider>
-      </WatchlistProvider>
+      </WatchlistInitializer>
       {showWelcome && <DemoWelcomeModal onClose={closeWelcome} />}
       <style>{`
         @keyframes fadeIn {

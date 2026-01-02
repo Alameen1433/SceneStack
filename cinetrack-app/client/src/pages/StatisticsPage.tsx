@@ -1,9 +1,14 @@
-import React, { memo, useMemo } from "react";
+import React, { memo, useMemo, useDeferredValue } from "react";
 import { useWatchlistStore, getFilteredItems, calculateWatchStats, formatWatchTime, type WatchStatistics } from "../store/useWatchlistStore";
 
 import { FiPlayCircle, FiCheckCircle, FiStar, FiBookmark, FiBarChart2 } from "react-icons/fi";
 
-// Stat Card Component
+const EMPTY_STATS: WatchStatistics = {
+    shows: { totalWatchTimeMinutes: 0, totalEpisodes: 0, totalShows: 0 },
+    movies: { totalWatchTimeMinutes: 0, totalMovies: 0 },
+    summary: { currentlyWatching: 0, completionRate: 0, topGenres: [], averageRating: 0 },
+};
+
 const StatCard: React.FC<{
     title: string;
     mainValue: string;
@@ -54,16 +59,22 @@ const GenreBadge: React.FC<{ name: string; count: number }> = ({ name, count }) 
 
 export const StatisticsPage: React.FC = memo(() => {
     const watchlist = useWatchlistStore(state => state.watchlist);
+
+    // Defer the watchlist so heavy computation doesn't block UI updates
+    const deferredWatchlist = useDeferredValue(watchlist);
+    const isStale = deferredWatchlist !== watchlist;
+
     const { currentlyWatchingItems, watchedItems } = useMemo(() =>
-        getFilteredItems(watchlist, null),
-        [watchlist]);
+        getFilteredItems(deferredWatchlist, null),
+        [deferredWatchlist]);
 
     const stats = useMemo<WatchStatistics>(() => {
-        return calculateWatchStats(watchlist, currentlyWatchingItems.length, watchedItems);
-    }, [watchlist, currentlyWatchingItems.length, watchedItems]);
+        if (deferredWatchlist.length === 0) return EMPTY_STATS;
+        return calculateWatchStats(deferredWatchlist, currentlyWatchingItems.length, watchedItems);
+    }, [deferredWatchlist, currentlyWatchingItems.length, watchedItems]);
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-6">
+        <div className={`container mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-6 transition-opacity duration-150 ${isStale ? "opacity-70" : "opacity-100"}`}>
             <h1 className="text-2xl font-bold text-white mb-6">Your Stats</h1>
 
             {/* Main Stats Grid */}
