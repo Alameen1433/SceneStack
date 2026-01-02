@@ -3,23 +3,21 @@ import React, {
     useContext,
     useState,
     useCallback,
-    useEffect,
     useMemo,
+    useEffect,
+    useRef,
     type ReactNode,
 } from "react";
 import { searchMedia, getMovieDetails, getTVDetails } from "../services/tmdbService";
 import type { SearchResult, MovieDetail, TVDetail, Media } from "../types/types";
-import type { WatchlistStatus } from "../services/dbService";
 
 interface UIContextType {
-    activeTab: "discover" | "lists" | "recommendations" | "stats";
-    setActiveTab: (tab: "discover" | "lists" | "recommendations" | "stats") => void;
-
     searchResults: SearchResult[];
     isSearchLoading: boolean;
+    setIsSearchLoading: (loading: boolean) => void;
     isSearchExpanded: boolean;
     setIsSearchExpanded: (expanded: boolean) => void;
-    handleSearch: (query: string) => void;
+    performSearch: (query: string) => Promise<void>;
 
     selectedMediaId: string | null;
     detailedMedia: MovieDetail | TVDetail | null;
@@ -35,10 +33,6 @@ interface UIContextType {
     openNotifications: () => void;
     closeNotifications: () => void;
 
-    viewAllSection: { title: string; items: Media[]; status?: WatchlistStatus } | null;
-    openViewAll: (title: string, items: Media[], status?: WatchlistStatus) => void;
-    closeViewAll: () => void;
-
     error: string | null;
     setError: (error: string | null) => void;
 }
@@ -46,9 +40,6 @@ interface UIContextType {
 const UIContext = createContext<UIContextType | undefined>(undefined);
 
 export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [activeTab, setActiveTab] = useState<"discover" | "lists" | "recommendations" | "stats">("discover");
-
-
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [isSearchLoading, setIsSearchLoading] = useState(false);
     const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -57,15 +48,33 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [animatingMedia, setAnimatingMedia] = useState<{ media: Media; rect: DOMRect } | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-    const [viewAllSection, setViewAllSection] = useState<{ title: string; items: Media[]; status?: WatchlistStatus } | null>(null);
     const [error, setError] = useState<string | null>(null);
+
+    const modalHistoryPushed = useRef(false);
+
+    const clearModalState = useCallback(() => {
+        setAnimatingMedia(null);
+        setSelectedMediaId(null);
+        setDetailedMedia(null);
+        modalHistoryPushed.current = false;
+    }, []);
+
+    useEffect(() => {
+        const handlePopState = () => {
+            if (detailedMedia || animatingMedia) {
+                clearModalState();
+            }
+        };
+
+        window.addEventListener("popstate", handlePopState);
+        return () => window.removeEventListener("popstate", handlePopState);
+    }, [detailedMedia, animatingMedia, clearModalState]);
 
     const performSearch = useCallback(async (query: string) => {
         if (!query) {
             setSearchResults([]);
             return;
         }
-        setIsSearchLoading(true);
         setError(null);
         try {
             const results = await searchMedia(query);
@@ -73,80 +82,15 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         } catch (err) {
             setError("Failed to fetch search results. Please try again.");
             console.error(err);
-        } finally {
-            setIsSearchLoading(false);
         }
     }, []);
-
-    const handleSearch = useCallback(
-        (query: string) => {
-            const url = new URL(window.location.toString());
-            if (query) {
-                url.searchParams.set("q", query);
-            } else {
-                url.searchParams.delete("q");
-                setIsSearchExpanded(false);
-            }
-            window.history.pushState({}, "", url);
-            performSearch(query);
-        },
-        [performSearch]
-    );
-
-    // Consolidate all popstate handling into one effect to prevent race conditions
-    useEffect(() => {
-        const handlePopState = () => {
-            const params = new URLSearchParams(window.location.search);
-            const query = params.get("q") || "";
-            performSearch(query);
-            if (!query) {
-                setIsSearchExpanded(false);
-            }
-            const hash = window.location.hash;
-            if (!hash.startsWith("#media/") && !hash.startsWith("#settings") && !hash.startsWith("#viewall/")) {
-                setSelectedMediaId(null);
-                setDetailedMedia(null);
-                setAnimatingMedia(null);
-                setIsSettingsOpen(false);
-                setViewAllSection(null);
-            }
-        };
-
-        window.addEventListener("popstate", handlePopState);
-
-        // Initial State Checks
-        const initialParams = new URLSearchParams(window.location.search);
-        const initialQuery = initialParams.get("q");
-        if (initialQuery) {
-            performSearch(initialQuery);
-            setIsSearchExpanded(true);
-        }
-
-        // Cleanup invalid hashes on mount
-        const hash = window.location.hash;
-        if (hash.startsWith("#media/") || hash === "#settings" || hash.startsWith("#viewall/")) {
-            // Replace invalid initial hash states with clean URL
-            window.history.replaceState(
-                null,
-                "",
-                window.location.pathname + window.location.search
-            );
-        }
-
-        return () => {
-            window.removeEventListener("popstate", handlePopState);
-        };
-    }, [performSearch]);
 
     const handleSelectMedia = useCallback(
         async (media: Media, rect: DOMRect) => {
             if (animatingMedia) return;
 
-            window.history.pushState(
-                { modal: "mediaDetail" },
-                "",
-                `#media/${media.media_type}/${media.id}`
-            );
+            window.history.pushState({ modal: "media" }, "");
+            modalHistoryPushed.current = true;
 
             setAnimatingMedia({ media, rect });
             setSelectedMediaId(`${media.media_type}-${media.id}`);
@@ -166,26 +110,28 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
                 setError("Failed to fetch media details.");
                 console.error(err);
                 setAnimatingMedia(null);
-                window.history.back();
+                if (modalHistoryPushed.current) {
+                    window.history.back();
+                }
             }
         },
         [animatingMedia]
     );
 
     const handleCloseModal = useCallback(() => {
-        setAnimatingMedia(null);
-        setSelectedMediaId(null);
-        setDetailedMedia(null);
-        window.history.back();
-    }, []);
+        if (modalHistoryPushed.current) {
+            window.history.back();
+        } else {
+            clearModalState();
+        }
+    }, [clearModalState]);
 
     const openSettings = useCallback(() => {
-        window.history.pushState({ modal: "settings" }, "", "#settings");
         setIsSettingsOpen(true);
     }, []);
 
     const closeSettings = useCallback(() => {
-        window.history.back();
+        setIsSettingsOpen(false);
     }, []);
 
     const openNotifications = useCallback(() => {
@@ -196,25 +142,14 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         setIsNotificationsOpen(false);
     }, []);
 
-    const openViewAll = useCallback((title: string, items: Media[], status?: WatchlistStatus) => {
-        const sectionSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-        window.history.pushState({ viewAll: sectionSlug }, "", `#viewall/${sectionSlug}`);
-        setViewAllSection({ title, items, status });
-    }, []);
-
-    const closeViewAll = useCallback(() => {
-        window.history.back();
-    }, []);
-
     const value = useMemo(
         () => ({
-            activeTab,
-            setActiveTab,
             searchResults,
             isSearchLoading,
+            setIsSearchLoading,
             isSearchExpanded,
             setIsSearchExpanded,
-            handleSearch,
+            performSearch,
             selectedMediaId,
             detailedMedia,
             animatingMedia,
@@ -226,18 +161,14 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
             isNotificationsOpen,
             openNotifications,
             closeNotifications,
-            viewAllSection,
-            openViewAll,
-            closeViewAll,
             error,
             setError,
         }),
         [
-            activeTab,
             searchResults,
             isSearchLoading,
             isSearchExpanded,
-            handleSearch,
+            performSearch,
             selectedMediaId,
             detailedMedia,
             animatingMedia,
@@ -249,9 +180,6 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
             isNotificationsOpen,
             openNotifications,
             closeNotifications,
-            viewAllSection,
-            openViewAll,
-            closeViewAll,
             error,
         ]
     );
