@@ -2,6 +2,8 @@ import React, { memo } from "react";
 import { FiImage, FiCheck, FiPlay } from "react-icons/fi";
 import { TMDB_IMAGE_BASE_URL, TMDB_IMAGE_BASE_URL_MOBILE } from "../../constants/constants";
 import type { Media } from "../../types/types";
+import { useUIStore } from "../../store/useUIStore";
+import { useLongPress } from "../../hooks/useLongPress";
 
 interface MediaCardProps {
   media: Media;
@@ -26,18 +28,49 @@ const MediaCardComponent: React.FC<MediaCardProps> = ({
 }) => {
   const title = media.media_type === "movie" ? media.title : media.name;
   const isCurrentlyWatching = progress !== undefined && progress > 0;
+  const openMenu = useUIStore(state => state.openMenu);
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    openMenu(e, {
+      id: media.id,
+      title: title || 'Unknown',
+      poster_path: media.poster_path,
+      media_type: media.media_type || 'movie'
+    }, 'desktop');
+  };
 
+  const handleClick = (e: React.MouseEvent | React.TouchEvent) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    onClick(media, rect);
+  };
+
+  const longPressProps = useLongPress(
+    (e) => {
+      openMenu(e, {
+        id: media.id,
+        title: title || 'Unknown',
+        poster_path: media.poster_path,
+        media_type: media.media_type || 'movie'
+      }, 'mobile');
+    },
+    () => {
+    }
+  );
 
   return (
     <div
       className="cursor-pointer transform transition-transform duration-300 hover:scale-105"
-      onClick={(e) => onClick(media, e.currentTarget.getBoundingClientRect())}
+      onContextMenu={handleContextMenu}
+      {...longPressProps}
+      onClick={(e) => {
+        handleClick(e);
+      }}
       role="button"
       aria-label={`View details for ${title}`}
       style={{ opacity: isDimmed ? 0 : 1, transition: "opacity 0.3s" }}
     >
-      <div className="relative rounded-lg overflow-hidden shadow-lg bg-brand-surface aspect-[2/3] ring-1 ring-white/5 group-hover:ring-brand-primary/30 transition-all">
+      <div className="relative rounded-lg overflow-hidden shadow-lg bg-brand-surface aspect-2/3 ring-1 ring-white/5 group-hover:ring-brand-primary/30 transition-all">
         {media.poster_path ? (
           <img
             src={`${TMDB_IMAGE_BASE_URL}${media.poster_path}`}

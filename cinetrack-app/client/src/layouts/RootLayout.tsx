@@ -11,6 +11,7 @@ import { BottomNavBar } from "../components/layout/BottomNavBar";
 import { SideNavBar } from "../components/layout/SideNavBar";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { getTVSeasonDetails } from "../services/tmdbService";
+import { ContextMenu } from "../components/overlay/ContextMenu";
 
 const MediaDetailModal = React.lazy(() =>
     import("../components/media/MediaDetailModal").then((module) => ({
@@ -51,7 +52,9 @@ const Header: React.FC = memo(() => {
             navigate(`/search?q=${encodeURIComponent(query)}`);
         } else {
             setIsSearchExpanded(false);
-            navigate(-1);
+            if (isOnSearchPage) {
+                navigate(-1);
+            }
         }
     };
 
@@ -311,6 +314,7 @@ const RootLayout: React.FC = () => {
             {!isOnSearchPage && <BottomNavBar activeTab={getActiveTab()} onTabChange={handleTabChange} />}
 
             <Modals />
+            <ContextMenu />
         </div>
     );
 };
