@@ -11,9 +11,6 @@ RUN npm ci --include=dev
 COPY client/ ./client/
 COPY server/ ./server/
 
-ARG VITE_TMDB_API_READ_ACCESS_TOKEN
-ENV VITE_TMDB_API_READ_ACCESS_TOKEN=$VITE_TMDB_API_READ_ACCESS_TOKEN
-
 RUN npm run build
 
 FROM node:20-alpine AS production
