@@ -28,6 +28,8 @@ COPY --from=builder /app/client/dist ./client/dist
 ENV NODE_ENV=production
 ENV PORT=3001
 
+WORKDIR /app/server
+
 EXPOSE 3001
 
-CMD ["npm", "start"]
+CMD ["node", "src/server.js"]

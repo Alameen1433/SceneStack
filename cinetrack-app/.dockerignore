@@ -13,3 +13,4 @@ client/dist
 *.log
 npm-debug.log*
 .DS_Store
+infra/data
