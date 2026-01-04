@@ -7,7 +7,7 @@ import { FiEye, FiCheck, FiPlus, FiTrash2, FiInfo } from 'react-icons/fi';
 
 const DesktopMenu = ({ position, onClose, item, isWatched, isInWatchlist }: any) => {
     const menuRef = useRef<HTMLDivElement>(null);
-    const { deleteItem, syncItem } = useWatchlistStore();
+    const { deleteItem, toggleMovieWatched, toggleWatchlistFromSearchResult } = useWatchlistStore();
     const { handleSelectMedia } = useUIContext();
 
     const adjustPosition = () => {
@@ -29,6 +29,27 @@ const DesktopMenu = ({ position, onClose, item, isWatched, isInWatchlist }: any)
             title: item.media_type === 'movie' ? item.title : undefined,
             name: item.media_type === 'tv' ? item.title : undefined,
         } as any, rect);
+        onClose();
+    };
+
+    const handleAddToList = () => {
+        toggleWatchlistFromSearchResult({
+            id: item.id,
+            media_type: item.media_type,
+            poster_path: item.poster_path,
+            title: item.media_type === 'movie' ? item.title : undefined,
+            name: item.media_type === 'tv' ? item.title : undefined,
+        } as any);
+        onClose();
+    };
+
+    const handleToggleWatched = () => {
+        toggleMovieWatched(item.id);
+        onClose();
+    };
+
+    const handleRemove = () => {
+        deleteItem(item.id);
         onClose();
     };
 
@@ -60,10 +81,7 @@ const DesktopMenu = ({ position, onClose, item, isWatched, isInWatchlist }: any)
 
                 {!isInWatchlist && (
                     <button
-                        onClick={() => {
-                            syncItem({ ...item, watched: false, watchlist: true });
-                            onClose();
-                        }}
+                        onClick={handleAddToList}
                         className="flex items-center gap-3 px-3 py-2.5 text-sm text-brand-text-light hover:bg-brand-primary/10 rounded-xl transition-colors text-left"
                     >
                         <FiPlus className="text-brand-primary" /> Add to List
@@ -72,10 +90,7 @@ const DesktopMenu = ({ position, onClose, item, isWatched, isInWatchlist }: any)
 
                 {isMovie && isInWatchlist && (
                     <button
-                        onClick={() => {
-                            syncItem({ ...item, watched: !isWatched, watchlist: true });
-                            onClose();
-                        }}
+                        onClick={handleToggleWatched}
                         className="flex items-center gap-3 px-3 py-2.5 text-sm text-brand-text-light hover:bg-brand-primary/10 rounded-xl transition-colors text-left"
                     >
                         {isWatched ? <><FiEye className="text-brand-secondary" /> Mark Unwatched</> : <><FiCheck className="text-brand-primary" /> Mark Watched</>}
@@ -84,7 +99,7 @@ const DesktopMenu = ({ position, onClose, item, isWatched, isInWatchlist }: any)
 
                 {isMovie && isInWatchlist && (
                     <button
-                        onClick={() => { deleteItem(item.id); onClose(); }}
+                        onClick={handleRemove}
                         className="flex items-center gap-3 px-3 py-2.5 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-colors text-left"
                     >
                         <FiTrash2 /> Remove from List
@@ -96,7 +111,7 @@ const DesktopMenu = ({ position, onClose, item, isWatched, isInWatchlist }: any)
 };
 
 const MobileBottomSheet = ({ onClose, item, isWatched, isInWatchlist }: any) => {
-    const { deleteItem, syncItem } = useWatchlistStore();
+    const { deleteItem, toggleMovieWatched, toggleWatchlistFromSearchResult } = useWatchlistStore();
     const { handleSelectMedia } = useUIContext();
 
     const handleViewDetails = () => {
@@ -108,6 +123,27 @@ const MobileBottomSheet = ({ onClose, item, isWatched, isInWatchlist }: any) => 
             title: item.media_type === 'movie' ? item.title : undefined,
             name: item.media_type === 'tv' ? item.title : undefined,
         } as any, rect);
+        onClose();
+    };
+
+    const handleAddToList = () => {
+        toggleWatchlistFromSearchResult({
+            id: item.id,
+            media_type: item.media_type,
+            poster_path: item.poster_path,
+            title: item.media_type === 'movie' ? item.title : undefined,
+            name: item.media_type === 'tv' ? item.title : undefined,
+        } as any);
+        onClose();
+    };
+
+    const handleToggleWatched = () => {
+        toggleMovieWatched(item.id);
+        onClose();
+    };
+
+    const handleRemove = () => {
+        deleteItem(item.id);
         onClose();
     };
 
@@ -155,7 +191,7 @@ const MobileBottomSheet = ({ onClose, item, isWatched, isInWatchlist }: any) => 
 
                             {!isInWatchlist && (
                                 <button
-                                    onClick={() => { syncItem({ ...item, watched: false, watchlist: true }); onClose(); }}
+                                    onClick={handleAddToList}
                                     className="w-full flex items-center px-4 py-3.5 text-[17px] text-brand-text-light active:bg-brand-primary/10"
                                 >
                                     <span className="flex items-center gap-3"><FiPlus className="text-xl text-brand-primary" /> Add to List</span>
@@ -164,10 +200,7 @@ const MobileBottomSheet = ({ onClose, item, isWatched, isInWatchlist }: any) => 
 
                             {isMovie && isInWatchlist && (
                                 <button
-                                    onClick={() => {
-                                        syncItem({ ...item, watched: !isWatched, watchlist: true });
-                                        onClose();
-                                    }}
+                                    onClick={handleToggleWatched}
                                     className="w-full flex items-center px-4 py-3.5 text-[17px] text-brand-text-light active:bg-brand-primary/10"
                                 >
                                     <span className="flex items-center gap-3">
@@ -181,7 +214,7 @@ const MobileBottomSheet = ({ onClose, item, isWatched, isInWatchlist }: any) => 
                         {isMovie && isInWatchlist && (
                             <div className="bg-brand-bg/50 rounded-2xl overflow-hidden">
                                 <button
-                                    onClick={() => { deleteItem(item.id); onClose(); }}
+                                    onClick={handleRemove}
                                     className="w-full flex items-center px-4 py-3.5 text-[17px] text-red-400 active:bg-red-500/10"
                                 >
                                     <span className="flex items-center gap-3"><FiTrash2 className="text-xl" /> Remove from List</span>
