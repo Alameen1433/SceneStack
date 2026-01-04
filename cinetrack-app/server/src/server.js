@@ -108,9 +108,6 @@ app.get("/health", (req, res) => {
 });
 
 app.use(express.static(path.join(__dirname, "../../client/dist")));
-app.get(["/assets/*", "/*.js", "/*.css", "/*.json", "/*.ico"], (req, res) => {
-  res.status(404).send("Resource not found");
-});
 
 // --- MongoDB Connection ---
 const client = new MongoClient(config.mongo.uri, {
