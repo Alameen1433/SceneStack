@@ -102,6 +102,11 @@ app.use("/api", (req, res, next) => {
   next();
 });
 
+// Health check endpoint for Northflank
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok", timestamp: Date.now() });
+});
+
 app.use(express.static(path.join(__dirname, "../../client/dist")));
 app.get(["/assets/*", "/*.js", "/*.css", "/*.json", "/*.ico"], (req, res) => {
   res.status(404).send("Resource not found");
