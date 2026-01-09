@@ -45,7 +45,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
     return (
         <div
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-fade-in"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-100 p-4 animate-fade-in"
             onClick={onCancel}
         >
             <div

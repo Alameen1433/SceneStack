@@ -1,11 +1,13 @@
 import React, { memo, useMemo } from "react";
-import { useWatchlistStore, getWatchlistIds, getFilteredItems, getProgressMap, getAllUniqueTags } from "../store/useWatchlistStore";
+import { useWatchlistStore, getWatchlistIds, getFilteredItems, getProgressMap, getAllUniqueTags, useWatchlistLoading } from "../store/useWatchlistStore";
 import { useUIContext } from "../contexts/UIContext";
 import { MediaSection } from "../components/common/MediaSection";
 import { HorizontalMediaScroll } from "../components/common/HorizontalMediaScroll";
+import { PageLoader } from "../components/common/Feedback";
 
 export const ListsPage: React.FC = memo(() => {
     const watchlist = useWatchlistStore(state => state.watchlist);
+    const isLoading = useWatchlistLoading();
     const activeTagFilter = useWatchlistStore(state => state.activeTagFilter);
     const setActiveTagFilter = useWatchlistStore(state => state.setActiveTagFilter);
 
@@ -23,6 +25,10 @@ export const ListsPage: React.FC = memo(() => {
 
     const allUniqueTags = useMemo(() => getAllUniqueTags(watchlist), [watchlist]);
     const { handleSelectMedia, selectedMediaId } = useUIContext();
+
+    if (isLoading) {
+        return <PageLoader />;
+    }
 
     return (
         <>

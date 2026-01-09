@@ -1,16 +1,67 @@
-import { useRef } from 'react';
+import { useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUIStore } from '../../store/useUIStore';
-import { useWatchlistStore } from '../../store/useWatchlistStore';
+import type { ContextMenuItem } from '../../store/useUIStore';
+import { useWatchlistStore, useIsItemPending } from '../../store/useWatchlistStore';
 import { useUIContext } from '../../contexts/UIContext';
-import { FiEye, FiCheck, FiPlus, FiTrash2, FiInfo } from 'react-icons/fi';
+import { FiEye, FiCheck, FiPlus, FiTrash2, FiInfo, FiLoader } from 'react-icons/fi';
+import type { SearchResult } from '../../types/types';
 
-const DesktopMenu = ({ position, onClose, item, isWatched, isInWatchlist }: any) => {
-    const menuRef = useRef<HTMLDivElement>(null);
-    const { deleteItem, toggleMovieWatched, toggleWatchlistFromSearchResult } = useWatchlistStore();
+interface MenuProps {
+    position?: { x: number; y: number };
+    onClose: () => void;
+    item: ContextMenuItem;
+    isWatched: boolean;
+    isInWatchlist: boolean;
+    isPending: boolean;
+}
+
+const toSearchResult = (item: ContextMenuItem): SearchResult => ({
+    id: item.id,
+    media_type: item.media_type,
+    poster_path: item.poster_path,
+    title: item.media_type === 'movie' ? item.title : undefined,
+    name: item.media_type === 'tv' ? item.title : undefined,
+    overview: '',
+    backdrop_path: null,
+});
+
+const useContextMenuActions = (item: ContextMenuItem, onClose: () => void, rect: DOMRect) => {
+    const { removeFromWatchlist, toggleMovieWatched, toggleWatchlistFromSearchResult } = useWatchlistStore();
     const { handleSelectMedia } = useUIContext();
 
+    const viewDetails = useCallback(() => {
+        handleSelectMedia(toSearchResult(item), rect);
+        onClose();
+    }, [item, rect, handleSelectMedia, onClose]);
+
+    const addToList = useCallback(() => {
+        toggleWatchlistFromSearchResult(toSearchResult(item));
+        onClose();
+    }, [item, toggleWatchlistFromSearchResult, onClose]);
+
+    const toggleWatched = useCallback(() => {
+        toggleMovieWatched(item.id);
+        onClose();
+    }, [item.id, toggleMovieWatched, onClose]);
+
+    const remove = useCallback(() => {
+        removeFromWatchlist(item.id);
+        onClose();
+    }, [item.id, removeFromWatchlist, onClose]);
+
+    return { viewDetails, addToList, toggleWatched, remove };
+};
+
+const Spinner = () => <FiLoader className="animate-spin" />;
+
+const DesktopMenu = ({ position, onClose, item, isWatched, isInWatchlist, isPending }: MenuProps) => {
+    const menuRef = useRef<HTMLDivElement>(null);
+    const rect = new DOMRect(position?.x ?? 0, position?.y ?? 0, 100, 150);
+    const { viewDetails, addToList, toggleWatched, remove } = useContextMenuActions(item, onClose, rect);
+
     const adjustPosition = () => {
+        if (!position) return { top: 0, left: 0 };
         const { innerWidth, innerHeight } = window;
         const x = position.x;
         const y = position.y;
@@ -20,40 +71,9 @@ const DesktopMenu = ({ position, onClose, item, isWatched, isInWatchlist }: any)
         return { top: correctedY, left: correctedX };
     };
 
-    const handleViewDetails = () => {
-        const rect = new DOMRect(position.x, position.y, 100, 150);
-        handleSelectMedia({
-            id: item.id,
-            media_type: item.media_type,
-            poster_path: item.poster_path,
-            title: item.media_type === 'movie' ? item.title : undefined,
-            name: item.media_type === 'tv' ? item.title : undefined,
-        } as any, rect);
-        onClose();
-    };
-
-    const handleAddToList = () => {
-        toggleWatchlistFromSearchResult({
-            id: item.id,
-            media_type: item.media_type,
-            poster_path: item.poster_path,
-            title: item.media_type === 'movie' ? item.title : undefined,
-            name: item.media_type === 'tv' ? item.title : undefined,
-        } as any);
-        onClose();
-    };
-
-    const handleToggleWatched = () => {
-        toggleMovieWatched(item.id);
-        onClose();
-    };
-
-    const handleRemove = () => {
-        deleteItem(item.id);
-        onClose();
-    };
-
     const isMovie = item.media_type === 'movie';
+    const btnBase = "flex items-center gap-3 px-3 py-2.5 text-sm rounded-xl transition-colors text-left";
+    const btnDisabled = "opacity-50 cursor-not-allowed";
 
     return (
         <motion.div
@@ -68,41 +88,42 @@ const DesktopMenu = ({ position, onClose, item, isWatched, isInWatchlist }: any)
         >
             <div className="px-3 py-2 border-b border-brand-primary/10 mb-1">
                 <h3 className="text-sm font-semibold text-brand-text-light truncate">{item.title}</h3>
-                <p className="text-xs text-brand-text-dim capitalize">{item.media_type === 'movie' ? 'Movie' : 'TV Series'}</p>
+                <p className="text-xs text-brand-text-dim capitalize">{isMovie ? 'Movie' : 'TV Series'}</p>
             </div>
 
             <div className="flex flex-col gap-0.5">
-                <button
-                    onClick={handleViewDetails}
-                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-brand-text-light hover:bg-brand-primary/10 rounded-xl transition-colors text-left"
-                >
+                <button onClick={viewDetails} className={`${btnBase} text-brand-text-light hover:bg-brand-primary/10`}>
                     <FiInfo className="text-brand-primary" /> View Details
                 </button>
 
                 {!isInWatchlist && (
                     <button
-                        onClick={handleAddToList}
-                        className="flex items-center gap-3 px-3 py-2.5 text-sm text-brand-text-light hover:bg-brand-primary/10 rounded-xl transition-colors text-left"
+                        onClick={addToList}
+                        disabled={isPending}
+                        className={`${btnBase} text-brand-text-light hover:bg-brand-primary/10 ${isPending ? btnDisabled : ''}`}
                     >
-                        <FiPlus className="text-brand-primary" /> Add to List
+                        {isPending ? <Spinner /> : <FiPlus className="text-brand-primary" />} Add to List
                     </button>
                 )}
 
                 {isMovie && isInWatchlist && (
                     <button
-                        onClick={handleToggleWatched}
-                        className="flex items-center gap-3 px-3 py-2.5 text-sm text-brand-text-light hover:bg-brand-primary/10 rounded-xl transition-colors text-left"
+                        onClick={toggleWatched}
+                        disabled={isPending}
+                        className={`${btnBase} text-brand-text-light hover:bg-brand-primary/10 ${isPending ? btnDisabled : ''}`}
                     >
-                        {isWatched ? <><FiEye className="text-brand-secondary" /> Mark Unwatched</> : <><FiCheck className="text-brand-primary" /> Mark Watched</>}
+                        {isPending ? <Spinner /> : isWatched ? <FiEye className="text-brand-secondary" /> : <FiCheck className="text-brand-primary" />}
+                        {isWatched ? ' Mark Unwatched' : ' Mark Watched'}
                     </button>
                 )}
 
-                {isMovie && isInWatchlist && (
+                {isInWatchlist && (
                     <button
-                        onClick={handleRemove}
-                        className="flex items-center gap-3 px-3 py-2.5 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-colors text-left"
+                        onClick={remove}
+                        disabled={isPending}
+                        className={`${btnBase} text-red-400 hover:bg-red-500/10 ${isPending ? btnDisabled : ''}`}
                     >
-                        <FiTrash2 /> Remove from List
+                        {isPending ? <Spinner /> : <FiTrash2 />} Remove from List
                     </button>
                 )}
             </div>
@@ -110,44 +131,13 @@ const DesktopMenu = ({ position, onClose, item, isWatched, isInWatchlist }: any)
     );
 };
 
-const MobileBottomSheet = ({ onClose, item, isWatched, isInWatchlist }: any) => {
-    const { deleteItem, toggleMovieWatched, toggleWatchlistFromSearchResult } = useWatchlistStore();
-    const { handleSelectMedia } = useUIContext();
-
-    const handleViewDetails = () => {
-        const rect = new DOMRect(window.innerWidth / 2 - 50, window.innerHeight / 2 - 75, 100, 150);
-        handleSelectMedia({
-            id: item.id,
-            media_type: item.media_type,
-            poster_path: item.poster_path,
-            title: item.media_type === 'movie' ? item.title : undefined,
-            name: item.media_type === 'tv' ? item.title : undefined,
-        } as any, rect);
-        onClose();
-    };
-
-    const handleAddToList = () => {
-        toggleWatchlistFromSearchResult({
-            id: item.id,
-            media_type: item.media_type,
-            poster_path: item.poster_path,
-            title: item.media_type === 'movie' ? item.title : undefined,
-            name: item.media_type === 'tv' ? item.title : undefined,
-        } as any);
-        onClose();
-    };
-
-    const handleToggleWatched = () => {
-        toggleMovieWatched(item.id);
-        onClose();
-    };
-
-    const handleRemove = () => {
-        deleteItem(item.id);
-        onClose();
-    };
+const MobileBottomSheet = ({ onClose, item, isWatched, isInWatchlist, isPending }: MenuProps) => {
+    const rect = new DOMRect(window.innerWidth / 2 - 50, window.innerHeight / 2 - 75, 100, 150);
+    const { viewDetails, addToList, toggleWatched, remove } = useContextMenuActions(item, onClose, rect);
 
     const isMovie = item.media_type === 'movie';
+    const btnBase = "w-full flex items-center px-4 py-3.5 text-[17px]";
+    const btnDisabled = "opacity-50";
 
     return (
         <>
@@ -174,50 +164,55 @@ const MobileBottomSheet = ({ onClose, item, isWatched, isInWatchlist }: any) => 
                                 className="w-12 h-18 object-cover rounded-lg shadow-md ring-1 ring-brand-primary/20"
                             />
                         )}
-                        <div>
+                        <div className="flex-1">
                             <h3 className="text-lg font-semibold text-brand-text-light">{item.title}</h3>
-                            <p className="text-sm text-brand-text-dim capitalize">{item.media_type === 'movie' ? 'Movie' : 'TV Series'}</p>
+                            <p className="text-sm text-brand-text-dim capitalize">{isMovie ? 'Movie' : 'TV Series'}</p>
                         </div>
+                        {isPending && <FiLoader className="animate-spin text-brand-primary text-xl" />}
                     </div>
 
                     <div className="p-2 flex flex-col gap-2">
                         <div className="bg-brand-bg/50 rounded-2xl overflow-hidden">
-                            <button
-                                onClick={handleViewDetails}
-                                className="w-full flex items-center px-4 py-3.5 text-[17px] text-brand-text-light active:bg-brand-primary/10 border-b border-brand-primary/5"
-                            >
+                            <button onClick={viewDetails} className={`${btnBase} text-brand-text-light active:bg-brand-primary/10 border-b border-brand-primary/5`}>
                                 <span className="flex items-center gap-3"><FiInfo className="text-xl text-brand-primary" /> View Details</span>
                             </button>
 
                             {!isInWatchlist && (
                                 <button
-                                    onClick={handleAddToList}
-                                    className="w-full flex items-center px-4 py-3.5 text-[17px] text-brand-text-light active:bg-brand-primary/10"
+                                    onClick={addToList}
+                                    disabled={isPending}
+                                    className={`${btnBase} text-brand-text-light active:bg-brand-primary/10 ${isPending ? btnDisabled : ''}`}
                                 >
-                                    <span className="flex items-center gap-3"><FiPlus className="text-xl text-brand-primary" /> Add to List</span>
+                                    <span className="flex items-center gap-3">
+                                        {isPending ? <Spinner /> : <FiPlus className="text-xl text-brand-primary" />} Add to List
+                                    </span>
                                 </button>
                             )}
 
                             {isMovie && isInWatchlist && (
                                 <button
-                                    onClick={handleToggleWatched}
-                                    className="w-full flex items-center px-4 py-3.5 text-[17px] text-brand-text-light active:bg-brand-primary/10"
+                                    onClick={toggleWatched}
+                                    disabled={isPending}
+                                    className={`${btnBase} text-brand-text-light active:bg-brand-primary/10 ${isPending ? btnDisabled : ''}`}
                                 >
                                     <span className="flex items-center gap-3">
-                                        {isWatched ? <FiEye className="text-xl text-brand-secondary" /> : <FiCheck className="text-xl text-brand-primary" />}
+                                        {isPending ? <Spinner /> : isWatched ? <FiEye className="text-xl text-brand-secondary" /> : <FiCheck className="text-xl text-brand-primary" />}
                                         {isWatched ? "Mark as Unwatched" : "Mark as Watched"}
                                     </span>
                                 </button>
                             )}
                         </div>
 
-                        {isMovie && isInWatchlist && (
+                        {isInWatchlist && (
                             <div className="bg-brand-bg/50 rounded-2xl overflow-hidden">
                                 <button
-                                    onClick={handleRemove}
-                                    className="w-full flex items-center px-4 py-3.5 text-[17px] text-red-400 active:bg-red-500/10"
+                                    onClick={remove}
+                                    disabled={isPending}
+                                    className={`${btnBase} text-red-400 active:bg-red-500/10 ${isPending ? btnDisabled : ''}`}
                                 >
-                                    <span className="flex items-center gap-3"><FiTrash2 className="text-xl" /> Remove from List</span>
+                                    <span className="flex items-center gap-3">
+                                        {isPending ? <Spinner /> : <FiTrash2 className="text-xl" />} Remove from List
+                                    </span>
                                 </button>
                             </div>
                         )}
@@ -238,11 +233,13 @@ const MobileBottomSheet = ({ onClose, item, isWatched, isInWatchlist }: any) => 
 export const ContextMenu = () => {
     const { isOpen, position, mediaItem, type, closeMenu } = useUIStore();
     const { watchlist } = useWatchlistStore();
+    const isPending = useIsItemPending(mediaItem?.id ?? 0);
 
     if (!mediaItem) return null;
 
     const isInWatchlist = watchlist.some(i => i.id === mediaItem.id);
-    const isWatched = watchlist.find(i => i.id === mediaItem.id) ? (watchlist.find(i => i.id === mediaItem.id) as any).watched : false;
+    const watchlistItem = watchlist.find(i => i.id === mediaItem.id);
+    const isWatched = watchlistItem && 'watched' in watchlistItem ? watchlistItem.watched : false;
 
     return (
         <AnimatePresence>
@@ -253,20 +250,9 @@ export const ContextMenu = () => {
                     )}
 
                     {type === 'desktop' ? (
-                        <DesktopMenu
-                            position={position}
-                            onClose={closeMenu}
-                            item={mediaItem}
-                            isWatched={isWatched}
-                            isInWatchlist={isInWatchlist}
-                        />
+                        <DesktopMenu position={position} onClose={closeMenu} item={mediaItem} isWatched={isWatched} isInWatchlist={isInWatchlist} isPending={isPending} />
                     ) : (
-                        <MobileBottomSheet
-                            onClose={closeMenu}
-                            item={mediaItem}
-                            isWatched={isWatched}
-                            isInWatchlist={isInWatchlist}
-                        />
+                        <MobileBottomSheet onClose={closeMenu} item={mediaItem} isWatched={isWatched} isInWatchlist={isInWatchlist} isPending={isPending} />
                     )}
                 </>
             )}
