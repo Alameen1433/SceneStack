@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { toast } from 'sonner';
 import * as dbService from '../services/dbService';
 import { socketService } from '../services/socketService';
 import { getMovieDetails, getTVDetails } from '../services/tmdbService';
@@ -14,8 +15,8 @@ import type {
 interface WatchlistState {
     watchlist: WatchlistItem[];
     isLoading: boolean;
-    error: string | null;
     activeTagFilter: string | null;
+    pendingItems: Set<number>;
 
     paginationState: {
         watchlist: { hasMore: boolean; page: number; loading: boolean };
@@ -28,7 +29,6 @@ interface WatchlistState {
 
     setWatchlist: (items: WatchlistItem[]) => void;
     setIsLoading: (isLoading: boolean) => void;
-    setError: (error: string | null) => void;
     setActiveTagFilter: (tag: string | null) => void;
 
     // Async Operations
@@ -45,7 +45,8 @@ interface WatchlistState {
     fetchRecommendations: (refresh?: boolean) => Promise<void>;
 
     syncItem: (item: WatchlistItem) => void;
-    deleteItem: (id: number) => void;
+    removeFromWatchlist: (id: number) => Promise<void>;
+    onItemDeleted: (id: number) => void;
 }
 
 // Track pending local operations to avoid duplicate updates from socket
@@ -67,8 +68,8 @@ const stripMediaForStorage = (media: MovieDetail | TVDetail): Partial<MovieDetai
 export const useWatchlistStore = create<WatchlistState>((set, get) => ({
     watchlist: [],
     isLoading: true,
-    error: null,
     activeTagFilter: null,
+    pendingItems: new Set<number>(),
     paginationState: {
         watchlist: { hasMore: true, page: 0, loading: false },
         watching: { hasMore: true, page: 0, loading: false },
@@ -79,7 +80,6 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
 
     setWatchlist: (items) => set({ watchlist: items }),
     setIsLoading: (isLoading) => set({ isLoading }),
-    setError: (error) => set({ error }),
     setActiveTagFilter: (activeTagFilter) => set({ activeTagFilter }),
 
     loadWatchlist: async () => {
@@ -109,10 +109,8 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
             socketService.connect();
         } catch (err) {
             console.error("Failed to load watchlist from DB", err);
-            set({
-                error: "Could not load your watchlist. Please try refreshing.",
-                isLoading: false
-            });
+            toast.error("Could not load your watchlist. Please try refreshing.");
+            set({ isLoading: false });
         }
     },
 
@@ -164,7 +162,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
                 await dbService.deleteWatchlistItem(media.id);
                 set({ watchlist: watchlist.filter(item => item.id !== media.id) });
             } catch (err) {
-                set({ error: "Failed to remove item from watchlist." });
+                toast.error("Failed to remove item from watchlist.");
                 console.error(err);
             }
         } else {
@@ -179,62 +177,77 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
                 await dbService.putWatchlistItem(newItem);
                 set({ watchlist: [newItem, ...watchlist] });
             } catch (err) {
-                set({ error: "Failed to add item to watchlist." });
+                toast.error("Failed to add item to watchlist.");
                 console.error(err);
             }
         }
     },
 
     toggleWatchlistFromSearchResult: async (media) => {
-        const { watchlist, toggleWatchlist } = get();
-        const exists = watchlist.some(item => item.id === media.id);
+        const { watchlist, toggleWatchlist, pendingItems } = get();
 
-        if (exists) {
-            try {
+        if (pendingItems.has(media.id)) return;
+
+        const exists = watchlist.some(item => item.id === media.id);
+        const newPending = new Set(pendingItems).add(media.id);
+        const title = media.title || media.name || 'Item';
+        set({ pendingItems: newPending });
+
+        try {
+            if (exists) {
                 pendingOps.add(media.id);
                 await dbService.deleteWatchlistItem(media.id);
                 set({ watchlist: watchlist.filter(item => item.id !== media.id) });
-            } catch (err) {
-                set({ error: "Failed to remove item from watchlist." });
-                console.error(err);
-            }
-        } else {
-            set({ error: null });
-            try {
+                toast.success(`"${title}" removed from list`);
+            } else {
                 const details = media.media_type === "movie"
                     ? await getMovieDetails(media.id)
                     : await getTVDetails(media.id);
                 await toggleWatchlist(details);
-            } catch (err) {
-                set({ error: "Failed to add item to watchlist." });
-                console.error(err);
+                toast.success(`"${title}" added to list`);
             }
+        } catch (err) {
+            toast.error(exists ? "Failed to remove item from watchlist." : "Failed to add item to watchlist.");
+            console.error(err);
+        } finally {
+            const updated = new Set(get().pendingItems);
+            updated.delete(media.id);
+            set({ pendingItems: updated });
         }
     },
 
     toggleMovieWatched: async (movieId) => {
-        const { watchlist } = get();
+        const { watchlist, pendingItems } = get();
+
+        if (pendingItems.has(movieId)) return;
+
         const itemToUpdate = watchlist.find(
             (item) => item.id === movieId && item.media_type === "movie"
         ) as MovieWatchlistItem | undefined;
 
         if (!itemToUpdate) return;
 
+        const newPending = new Set(pendingItems).add(movieId);
         pendingOps.add(movieId);
         const updatedItem = { ...itemToUpdate, watched: !itemToUpdate.watched };
+        const title = itemToUpdate.title || 'Movie';
 
         set({
+            pendingItems: newPending,
             watchlist: watchlist.map((item) => (item.id === movieId ? updatedItem : item))
         });
 
         try {
             await dbService.putWatchlistItem(updatedItem);
+            toast.success(updatedItem.watched ? `"${title}" marked as watched` : `"${title}" marked as unwatched`);
         } catch (err) {
-            set({
-                watchlist: watchlist.map((item) => (item.id === movieId ? itemToUpdate : item)),
-                error: "Failed to save progress. Please try again."
-            });
+            set({ watchlist: watchlist.map((item) => (item.id === movieId ? itemToUpdate : item)) });
+            toast.error("Failed to save progress. Please try again.");
             console.error(err);
+        } finally {
+            const updated = new Set(get().pendingItems);
+            updated.delete(movieId);
+            set({ pendingItems: updated });
         }
     },
 
@@ -273,10 +286,8 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
         try {
             await dbService.putWatchlistItem(updatedItem);
         } catch (err) {
-            set({
-                watchlist: watchlist.map((item) => (item.id === tvId ? itemToUpdate : item)),
-                error: "Failed to save progress. Please try again."
-            });
+            set({ watchlist: watchlist.map((item) => (item.id === tvId ? itemToUpdate : item)) });
+            toast.error("Failed to save progress. Please try again.");
             console.error(err);
         }
     },
@@ -312,10 +323,8 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
         try {
             await dbService.putWatchlistItem(updatedItem);
         } catch (err) {
-            set({
-                watchlist: watchlist.map((item) => (item.id === tvId ? itemToUpdate : item)),
-                error: "Failed to save progress. Please try again."
-            });
+            set({ watchlist: watchlist.map((item) => (item.id === tvId ? itemToUpdate : item)) });
+            toast.error("Failed to save progress. Please try again.");
             console.error(err);
         }
     },
@@ -350,7 +359,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
         } catch (err) {
-            set({ error: "Failed to export watchlist." });
+            toast.error("Failed to export watchlist.");
             console.error(err);
         }
     },
@@ -385,13 +394,13 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
                     set({ watchlist: strippedItems });
                     resolve();
                 } catch (err) {
-                    set({ error: "Import failed. Please ensure the file is a valid Scene Stack JSON export." });
+                    toast.error("Import failed. Please ensure the file is a valid Scene Stack JSON export.");
                     console.error(err);
                     resolve();
                 }
             };
             reader.onerror = () => {
-                set({ error: "Failed to read the selected file." });
+                toast.error("Failed to read the selected file.");
                 resolve();
             };
             reader.readAsText(file);
@@ -420,7 +429,37 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
         }
     },
 
-    // Socket Helpers
+    removeFromWatchlist: async (id) => {
+        const { watchlist, pendingItems } = get();
+
+        if (pendingItems.has(id)) return;
+
+        const originalItem = watchlist.find((i) => i.id === id);
+        if (!originalItem) return;
+
+        const title = ('title' in originalItem ? originalItem.title : originalItem.name) || 'Item';
+        const newPending = new Set(pendingItems).add(id);
+        pendingOps.add(id);
+        set({
+            pendingItems: newPending,
+            watchlist: watchlist.filter((i) => i.id !== id)
+        });
+
+        try {
+            await dbService.deleteWatchlistItem(id);
+            toast.success(`"${title}" removed from list`);
+        } catch (err) {
+            set({ watchlist: [originalItem, ...get().watchlist] });
+            toast.error("Failed to remove item. Please try again.");
+            console.error(err);
+        } finally {
+            const updated = new Set(get().pendingItems);
+            updated.delete(id);
+            set({ pendingItems: updated });
+        }
+    },
+
+    // Socket Helpers - these handle incoming events from other clients
     syncItem: (item) => {
         if (pendingOps.has(item.id)) {
             pendingOps.delete(item.id);
@@ -435,7 +474,7 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
         }
     },
 
-    deleteItem: (id) => {
+    onItemDeleted: (id) => {
         if (pendingOps.has(id)) {
             pendingOps.delete(id);
             return;
@@ -629,7 +668,7 @@ import { useEffect, useMemo } from 'react';
 export const useWatchlistInit = () => {
     const loadWatchlist = useWatchlistStore(state => state.loadWatchlist);
     const syncItem = useWatchlistStore(state => state.syncItem);
-    const deleteItem = useWatchlistStore(state => state.deleteItem);
+    const onItemDeleted = useWatchlistStore(state => state.onItemDeleted);
 
     useEffect(() => {
         loadWatchlist();
@@ -645,7 +684,7 @@ export const useWatchlistInit = () => {
         });
 
         const unsubDelete = socketService.onDelete(({ id }) => {
-            deleteItem(id);
+            onItemDeleted(id);
         });
 
         const unsubSync = socketService.onSync(() => {
@@ -657,7 +696,7 @@ export const useWatchlistInit = () => {
             unsubDelete();
             unsubSync();
         };
-    }, [syncItem, deleteItem, loadWatchlist]);
+    }, [syncItem, onItemDeleted, loadWatchlist]);
 };
 
 // ============================================================================
@@ -681,4 +720,12 @@ export const useProgressMap = () => {
     const watchlist = useWatchlistStore(state => state.watchlist);
     const { currentlyWatchingItems } = useMemo(() => getFilteredItems(watchlist, null), [watchlist]);
     return useMemo(() => getProgressMap(currentlyWatchingItems), [currentlyWatchingItems]);
+};
+
+export const usePendingItems = () => {
+    return useWatchlistStore(state => state.pendingItems);
+};
+
+export const useIsItemPending = (itemId: number) => {
+    return useWatchlistStore(state => state.pendingItems.has(itemId));
 };

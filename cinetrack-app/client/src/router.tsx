@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
-import { lazy } from "react";
+import { lazy, Suspense } from "react";
+import { PageLoader, RouteErrorFallback } from "./components/common/Feedback";
 
 const RootLayout = lazy(() => import("./layouts/RootLayout"));
 const DiscoverPage = lazy(() => import("./pages/DiscoverPage").then(m => ({ default: m.DiscoverPage })));
@@ -9,18 +10,25 @@ const StatisticsPage = lazy(() => import("./pages/StatisticsPage").then(m => ({ 
 const ViewAllPage = lazy(() => import("./pages/ViewAllPage").then(m => ({ default: m.ViewAllPage })));
 const SearchResultsPage = lazy(() => import("./pages/SearchResultsPage"));
 
+const withSuspense = (Component: React.LazyExoticComponent<React.ComponentType>) => (
+    <Suspense fallback={<PageLoader />}>
+        <Component />
+    </Suspense>
+);
+
 export const router = createBrowserRouter([
     {
         path: "/",
-        element: <RootLayout />,
+        element: withSuspense(RootLayout),
+        errorElement: <RouteErrorFallback />,
         children: [
-            { index: true, element: <DiscoverPage /> },
-            { path: "discover", element: <DiscoverPage /> },
-            { path: "lists", element: <ListsPage /> },
-            { path: "lists/:status", element: <ViewAllPage /> },
-            { path: "recommendations", element: <RecommendationsPage /> },
-            { path: "stats", element: <StatisticsPage /> },
-            { path: "search", element: <SearchResultsPage /> },
+            { index: true, element: withSuspense(DiscoverPage) },
+            { path: "discover", element: withSuspense(DiscoverPage) },
+            { path: "lists", element: withSuspense(ListsPage) },
+            { path: "lists/:status", element: withSuspense(ViewAllPage) },
+            { path: "recommendations", element: withSuspense(RecommendationsPage) },
+            { path: "stats", element: withSuspense(StatisticsPage) },
+            { path: "search", element: withSuspense(SearchResultsPage) },
             { path: "*", element: <Navigate to="/" replace /> },
         ],
     },

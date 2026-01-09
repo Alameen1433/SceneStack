@@ -12,6 +12,7 @@ import { SideNavBar } from "../components/layout/SideNavBar";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { getTVSeasonDetails } from "../services/tmdbService";
 import { ContextMenu } from "../components/overlay/ContextMenu";
+import { Toaster } from "sonner";
 
 const MediaDetailModal = React.lazy(() =>
     import("../components/media/MediaDetailModal").then((module) => ({
@@ -315,6 +316,14 @@ const RootLayout: React.FC = () => {
 
             <Modals />
             <ContextMenu />
+            <Toaster
+                position="bottom-center"
+                offset={96}
+                toastOptions={{
+                    className: 'bg-brand-surface text-brand-text-light border border-brand-primary/20',
+                    duration: 3000,
+                }}
+            />
         </div>
     );
 };
