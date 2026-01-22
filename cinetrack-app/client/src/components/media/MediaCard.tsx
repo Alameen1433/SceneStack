@@ -28,16 +28,20 @@ const MediaCardComponent: React.FC<MediaCardProps> = ({
 }) => {
   const title = media.media_type === "movie" ? media.title : media.name;
   const isCurrentlyWatching = progress !== undefined && progress > 0;
-  const openMenu = useUIStore(state => state.openMenu);
+  const openMenu = useUIStore((state) => state.openMenu);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
-    openMenu(e, {
-      id: media.id,
-      title: title || 'Unknown',
-      poster_path: media.poster_path,
-      media_type: media.media_type || 'movie'
-    }, 'desktop');
+    openMenu(
+      e,
+      {
+        id: media.id,
+        title: title || "Unknown",
+        poster_path: media.poster_path,
+        media_type: media.media_type || "movie",
+      },
+      "desktop"
+    );
   };
 
   const handleClick = (e: React.MouseEvent | React.TouchEvent) => {
@@ -47,15 +51,18 @@ const MediaCardComponent: React.FC<MediaCardProps> = ({
 
   const longPressProps = useLongPress(
     (e) => {
-      openMenu(e, {
-        id: media.id,
-        title: title || 'Unknown',
-        poster_path: media.poster_path,
-        media_type: media.media_type || 'movie'
-      }, 'mobile');
+      openMenu(
+        e,
+        {
+          id: media.id,
+          title: title || "Unknown",
+          poster_path: media.poster_path,
+          media_type: media.media_type || "movie",
+        },
+        "mobile"
+      );
     },
-    () => {
-    }
+    () => {}
   );
 
   return (
@@ -127,4 +134,3 @@ export const MediaCard = memo(MediaCardComponent, (prevProps, nextProps) => {
     prevProps.isDimmed === nextProps.isDimmed
   );
 });
-

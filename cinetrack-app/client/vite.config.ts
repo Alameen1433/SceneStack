@@ -1,20 +1,20 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  envDir: './',
+  envDir: "./",
   server: {
     port: 5173,
     host: true,
     proxy: {
-      '/api': {
-        target: 'http://localhost:3001',
+      "/api": {
+        target: "http://localhost:3001",
         changeOrigin: true,
       },
-      '/socket.io': {
-        target: 'http://localhost:3001',
+      "/socket.io": {
+        target: "http://localhost:3001",
         changeOrigin: true,
         ws: true,
       },
@@ -22,16 +22,16 @@ export default defineConfig({
   },
   build: {
     sourcemap: false,
-    target: 'es2020',
+    target: "es2020",
     cssCodeSplit: true,
-    minify: 'esbuild',
+    minify: "esbuild",
     rollupOptions: {
       output: {
         manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'scheduler'],
-          'socket': ['socket.io-client'],
+          "react-vendor": ["react", "react-dom", "scheduler"],
+          socket: ["socket.io-client"],
         },
       },
     },
   },
-})
+});

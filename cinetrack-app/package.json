@@ -2,6 +2,7 @@
   "name": "cinetrack-app",
   "private": true,
   "version": "0.0.0",
+  "type": "module",
   "workspaces": [
     "client",
     "server"
@@ -11,6 +12,18 @@
     "dev:server": "npm run dev --workspace=server",
     "build": "npm run build --workspace=client",
     "start": "npm start --workspace=server",
-    "lint": "npm run lint --workspace=client"
+    "lint": "npm run lint --workspace=client",
+    "lint:fix": "npm run lint --workspace=client -- --fix",
+    "format": "prettier --write \"client/**/*.{js,ts,tsx,json,css}\" \"server/**/*.{js,json}\" \"*.{json,md}\"",
+    "format:check": "prettier --check \"client/**/*.{js,ts,tsx,json,css}\" \"server/**/*.{js,json}\" \"*.{json,md}\"",
+    "db:up": "docker-compose -f infra/docker-compose.yml up -d",
+    "db:down": "docker-compose -f infra/docker-compose.yml down",
+    "db:logs": "docker-compose -f infra/docker-compose.yml logs -f"
+  },
+  "devDependencies": {
+    "baseline-browser-mapping": "^2.9.15",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-prettier": "^5.4.1",
+    "prettier": "^3.5.3"
   }
 }

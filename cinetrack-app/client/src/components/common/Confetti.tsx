@@ -4,9 +4,7 @@ const ConfettiPiece: React.FC<{ style: React.CSSProperties }> = ({ style }) => (
   <div className="absolute w-2 h-4 rounded-sm" style={style}></div>
 );
 
-export const Confetti: React.FC<{ onComplete: () => void }> = ({
-  onComplete,
-}) => {
+export const Confetti: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
   const [pieces, setPieces] = useState<React.CSSProperties[]>([]);
   const onCompleteRef = useRef(onComplete);
 
@@ -14,10 +12,7 @@ export const Confetti: React.FC<{ onComplete: () => void }> = ({
     onCompleteRef.current = onComplete;
   }, [onComplete]);
 
-  const colors = useMemo(
-    () => ["#3B82F6", "#4F46E5", "#FBBF24", "#EC4899", "#10B981"],
-    []
-  );
+  const colors = useMemo(() => ["#3B82F6", "#4F46E5", "#FBBF24", "#EC4899", "#10B981"], []);
 
   useEffect(() => {
     const newPieces = Array.from({ length: 150 }).map((_, i) => {

@@ -1,52 +1,60 @@
-import { create } from 'zustand';
-import { toast } from 'sonner';
-import * as dbService from '../services/dbService';
-import { socketService } from '../services/socketService';
-import { getMovieDetails, getTVDetails } from '../services/tmdbService';
+import { create } from "zustand";
+import { toast } from "sonner";
+import * as dbService from "../services/dbService";
+import { socketService } from "../services/socketService";
+import { getMovieDetails, getTVDetails } from "../services/tmdbService";
 import type {
-    WatchlistItem,
-    MovieDetail,
-    TVDetail,
-    SearchResult,
-    MovieWatchlistItem,
-    TVWatchlistItem,
-} from '../types/types';
+  WatchlistItem,
+  MovieDetail,
+  TVDetail,
+  SearchResult,
+  MovieWatchlistItem,
+  TVWatchlistItem,
+} from "../types/types";
 
 interface WatchlistState {
-    watchlist: WatchlistItem[];
-    isLoading: boolean;
-    activeTagFilter: string | null;
-    pendingItems: Set<number>;
+  watchlist: WatchlistItem[];
+  isLoading: boolean;
+  activeTagFilter: string | null;
+  pendingItems: Set<number>;
 
-    paginationState: {
-        watchlist: { hasMore: boolean; page: number; loading: boolean };
-        watching: { hasMore: boolean; page: number; loading: boolean };
-        watched: { hasMore: boolean; page: number; loading: boolean };
-    };
+  paginationState: {
+    watchlist: { hasMore: boolean; page: number; loading: boolean };
+    watching: { hasMore: boolean; page: number; loading: boolean };
+    watched: { hasMore: boolean; page: number; loading: boolean };
+  };
 
-    recommendations: SearchResult[];
-    recommendationsLoading: boolean;
+  recommendations: SearchResult[];
+  recommendationsLoading: boolean;
 
-    setWatchlist: (items: WatchlistItem[]) => void;
-    setIsLoading: (isLoading: boolean) => void;
-    setActiveTagFilter: (tag: string | null) => void;
+  setWatchlist: (items: WatchlistItem[]) => void;
+  setIsLoading: (isLoading: boolean) => void;
+  setActiveTagFilter: (tag: string | null) => void;
 
-    // Async Operations
-    loadWatchlist: () => Promise<void>;
-    loadMoreByStatus: (status: 'watchlist' | 'watching' | 'watched') => Promise<void>;
-    toggleWatchlist: (media: MovieDetail | TVDetail) => Promise<void>;
-    toggleWatchlistFromSearchResult: (media: SearchResult) => Promise<void>;
-    toggleMovieWatched: (movieId: number) => Promise<void>;
-    toggleEpisodeWatched: (tvId: number, seasonNumber: number, episodeNumber: number) => Promise<void>;
-    toggleSeasonWatched: (tvId: number, seasonNumber: number, allEpisodeNumbers: number[]) => Promise<void>;
-    updateTags: (mediaId: number, newTags: string[]) => Promise<void>;
-    exportWatchlist: () => Promise<void>;
-    importWatchlist: (file: File) => Promise<void>;
-    fetchRecommendations: (refresh?: boolean) => Promise<void>;
+  // Async Operations
+  loadWatchlist: () => Promise<void>;
+  loadMoreByStatus: (status: "watchlist" | "watching" | "watched") => Promise<void>;
+  toggleWatchlist: (media: MovieDetail | TVDetail) => Promise<void>;
+  toggleWatchlistFromSearchResult: (media: SearchResult) => Promise<void>;
+  toggleMovieWatched: (movieId: number) => Promise<void>;
+  toggleEpisodeWatched: (
+    tvId: number,
+    seasonNumber: number,
+    episodeNumber: number
+  ) => Promise<void>;
+  toggleSeasonWatched: (
+    tvId: number,
+    seasonNumber: number,
+    allEpisodeNumbers: number[]
+  ) => Promise<void>;
+  updateTags: (mediaId: number, newTags: string[]) => Promise<void>;
+  exportWatchlist: () => Promise<void>;
+  importWatchlist: (file: File) => Promise<void>;
+  fetchRecommendations: (refresh?: boolean) => Promise<void>;
 
-    syncItem: (item: WatchlistItem) => void;
-    removeFromWatchlist: (id: number) => Promise<void>;
-    onItemDeleted: (id: number) => void;
+  syncItem: (item: WatchlistItem) => void;
+  removeFromWatchlist: (id: number) => Promise<void>;
+  onItemDeleted: (id: number) => void;
 }
 
 // Track pending local operations to avoid duplicate updates from socket
@@ -54,649 +62,648 @@ interface WatchlistState {
 const pendingOps = new Set<number>();
 
 const stripMediaForStorage = (media: MovieDetail | TVDetail): Partial<MovieDetail | TVDetail> => {
-    const copy = { ...media } as Record<string, unknown>;
-    delete copy.images;
-    delete copy.videos;
-    delete copy.credits;
-    delete copy.keywords;
-    delete copy.recommendations;
-    delete copy.similar;
-    delete copy.reviews;
-    return copy as Partial<MovieDetail | TVDetail>;
+  const copy = { ...media } as Record<string, unknown>;
+  delete copy.images;
+  delete copy.videos;
+  delete copy.credits;
+  delete copy.keywords;
+  delete copy.recommendations;
+  delete copy.similar;
+  delete copy.reviews;
+  return copy as Partial<MovieDetail | TVDetail>;
 };
 
 export const useWatchlistStore = create<WatchlistState>((set, get) => ({
-    watchlist: [],
-    isLoading: true,
-    activeTagFilter: null,
-    pendingItems: new Set<number>(),
-    paginationState: {
-        watchlist: { hasMore: true, page: 0, loading: false },
-        watching: { hasMore: true, page: 0, loading: false },
-        watched: { hasMore: true, page: 0, loading: false },
-    },
-    recommendations: [],
-    recommendationsLoading: false,
+  watchlist: [],
+  isLoading: true,
+  activeTagFilter: null,
+  pendingItems: new Set<number>(),
+  paginationState: {
+    watchlist: { hasMore: true, page: 0, loading: false },
+    watching: { hasMore: true, page: 0, loading: false },
+    watched: { hasMore: true, page: 0, loading: false },
+  },
+  recommendations: [],
+  recommendationsLoading: false,
 
-    setWatchlist: (items) => set({ watchlist: items }),
-    setIsLoading: (isLoading) => set({ isLoading }),
-    setActiveTagFilter: (activeTagFilter) => set({ activeTagFilter }),
+  setWatchlist: (items) => set({ watchlist: items }),
+  setIsLoading: (isLoading) => set({ isLoading }),
+  setActiveTagFilter: (activeTagFilter) => set({ activeTagFilter }),
 
-    loadWatchlist: async () => {
-        set({ isLoading: true });
-        try {
-            const [watchlistRes, watchingRes, watchedRes] = await Promise.all([
-                dbService.getWatchlistByStatus('watchlist', 1, 20),
-                dbService.getWatchlistByStatus('watching', 1, 20),
-                dbService.getWatchlistByStatus('watched', 1, 20),
-            ]);
+  loadWatchlist: async () => {
+    set({ isLoading: true });
+    try {
+      const [watchlistRes, watchingRes, watchedRes] = await Promise.all([
+        dbService.getWatchlistByStatus("watchlist", 1, 20),
+        dbService.getWatchlistByStatus("watching", 1, 20),
+        dbService.getWatchlistByStatus("watched", 1, 20),
+      ]);
 
-            const allItems = [
-                ...watchlistRes.items,
-                ...watchingRes.items,
-                ...watchedRes.items,
-            ];
+      const allItems = [...watchlistRes.items, ...watchingRes.items, ...watchedRes.items];
 
-            set({
-                watchlist: allItems,
-                isLoading: false,
-                paginationState: {
-                    watchlist: { hasMore: watchlistRes.hasMore, page: 1, loading: false },
-                    watching: { hasMore: watchingRes.hasMore, page: 1, loading: false },
-                    watched: { hasMore: watchedRes.hasMore, page: 1, loading: false },
-                },
-            });
-            socketService.connect();
-        } catch (err) {
-            console.error("Failed to load watchlist from DB", err);
-            toast.error("Could not load your watchlist. Please try refreshing.");
-            set({ isLoading: false });
-        }
-    },
-
-    loadMoreByStatus: async (status) => {
-        const { paginationState, watchlist } = get();
-        const categoryState = paginationState[status];
-
-        if (!categoryState.hasMore || categoryState.loading) return;
-
-        set({
-            paginationState: {
-                ...paginationState,
-                [status]: { ...categoryState, loading: true },
-            },
-        });
-
-        try {
-            const nextPage = categoryState.page + 1;
-            const response = await dbService.getWatchlistByStatus(status, nextPage, 20);
-
-            const existingIds = new Set(watchlist.map(i => i.id));
-            const newItems = response.items.filter(item => !existingIds.has(item.id));
-
-            set({
-                watchlist: [...watchlist, ...newItems],
-                paginationState: {
-                    ...get().paginationState,
-                    [status]: { hasMore: response.hasMore, page: nextPage, loading: false },
-                },
-            });
-        } catch (err) {
-            console.error(`Failed to load more ${status} items`, err);
-            set({
-                paginationState: {
-                    ...get().paginationState,
-                    [status]: { ...categoryState, loading: false },
-                },
-            });
-        }
-    },
-
-    toggleWatchlist: async (media) => {
-        const { watchlist } = get();
-        const exists = watchlist.some(item => item.id === media.id);
-        pendingOps.add(media.id);
-
-        if (exists) {
-            try {
-                await dbService.deleteWatchlistItem(media.id);
-                set({ watchlist: watchlist.filter(item => item.id !== media.id) });
-            } catch (err) {
-                toast.error("Failed to remove item from watchlist.");
-                console.error(err);
-            }
-        } else {
-            try {
-                const strippedMedia = stripMediaForStorage(media);
-                let newItem: WatchlistItem;
-                if (media.media_type === "movie") {
-                    newItem = { ...strippedMedia, watched: false, tags: [] } as WatchlistItem;
-                } else {
-                    newItem = { ...strippedMedia, watchedEpisodes: {}, tags: [] } as WatchlistItem;
-                }
-                await dbService.putWatchlistItem(newItem);
-                set({ watchlist: [newItem, ...watchlist] });
-            } catch (err) {
-                toast.error("Failed to add item to watchlist.");
-                console.error(err);
-            }
-        }
-    },
-
-    toggleWatchlistFromSearchResult: async (media) => {
-        const { watchlist, toggleWatchlist, pendingItems } = get();
-
-        if (pendingItems.has(media.id)) return;
-
-        const exists = watchlist.some(item => item.id === media.id);
-        const newPending = new Set(pendingItems).add(media.id);
-        const title = media.title || media.name || 'Item';
-        set({ pendingItems: newPending });
-
-        try {
-            if (exists) {
-                pendingOps.add(media.id);
-                await dbService.deleteWatchlistItem(media.id);
-                set({ watchlist: watchlist.filter(item => item.id !== media.id) });
-                toast.success(`"${title}" removed from list`);
-            } else {
-                const details = media.media_type === "movie"
-                    ? await getMovieDetails(media.id)
-                    : await getTVDetails(media.id);
-                await toggleWatchlist(details);
-                toast.success(`"${title}" added to list`);
-            }
-        } catch (err) {
-            toast.error(exists ? "Failed to remove item from watchlist." : "Failed to add item to watchlist.");
-            console.error(err);
-        } finally {
-            const updated = new Set(get().pendingItems);
-            updated.delete(media.id);
-            set({ pendingItems: updated });
-        }
-    },
-
-    toggleMovieWatched: async (movieId) => {
-        const { watchlist, pendingItems } = get();
-
-        if (pendingItems.has(movieId)) return;
-
-        const itemToUpdate = watchlist.find(
-            (item) => item.id === movieId && item.media_type === "movie"
-        ) as MovieWatchlistItem | undefined;
-
-        if (!itemToUpdate) return;
-
-        const newPending = new Set(pendingItems).add(movieId);
-        pendingOps.add(movieId);
-        const updatedItem = { ...itemToUpdate, watched: !itemToUpdate.watched };
-        const title = itemToUpdate.title || 'Movie';
-
-        set({
-            pendingItems: newPending,
-            watchlist: watchlist.map((item) => (item.id === movieId ? updatedItem : item))
-        });
-
-        try {
-            await dbService.putWatchlistItem(updatedItem);
-            toast.success(updatedItem.watched ? `"${title}" marked as watched` : `"${title}" marked as unwatched`);
-        } catch (err) {
-            set({ watchlist: watchlist.map((item) => (item.id === movieId ? itemToUpdate : item)) });
-            toast.error("Failed to save progress. Please try again.");
-            console.error(err);
-        } finally {
-            const updated = new Set(get().pendingItems);
-            updated.delete(movieId);
-            set({ pendingItems: updated });
-        }
-    },
-
-    toggleEpisodeWatched: async (tvId, seasonNumber, episodeNumber) => {
-        const { watchlist } = get();
-        const itemToUpdate = watchlist.find(
-            (item) => item.id === tvId && item.media_type === "tv"
-        ) as TVWatchlistItem | undefined;
-
-        if (!itemToUpdate) return;
-
-        pendingOps.add(tvId);
-
-        const newWatchedEpisodes = { ...(itemToUpdate.watchedEpisodes || {}) };
-        const seasonEpisodes = newWatchedEpisodes[seasonNumber]
-            ? [...newWatchedEpisodes[seasonNumber]]
-            : [];
-        const episodeIndex = seasonEpisodes.indexOf(episodeNumber);
-
-        if (episodeIndex > -1) {
-            seasonEpisodes.splice(episodeIndex, 1);
-        } else {
-            seasonEpisodes.push(episodeNumber);
-        }
-        newWatchedEpisodes[seasonNumber] = seasonEpisodes;
-
-        const updatedItem = {
-            ...itemToUpdate,
-            watchedEpisodes: newWatchedEpisodes,
-        };
-
-        set({
-            watchlist: watchlist.map((item) => (item.id === tvId ? updatedItem : item))
-        });
-
-        try {
-            await dbService.putWatchlistItem(updatedItem);
-        } catch (err) {
-            set({ watchlist: watchlist.map((item) => (item.id === tvId ? itemToUpdate : item)) });
-            toast.error("Failed to save progress. Please try again.");
-            console.error(err);
-        }
-    },
-
-    toggleSeasonWatched: async (tvId, seasonNumber, allEpisodeNumbers) => {
-        const { watchlist } = get();
-        const itemToUpdate = watchlist.find(
-            (item) => item.id === tvId && item.media_type === "tv"
-        ) as TVWatchlistItem | undefined;
-
-        if (!itemToUpdate) return;
-
-        pendingOps.add(tvId);
-
-        const newWatchedEpisodes = { ...(itemToUpdate.watchedEpisodes || {}) };
-        const seasonEpisodes = newWatchedEpisodes[seasonNumber] || [];
-
-        if (seasonEpisodes.length === allEpisodeNumbers.length) {
-            newWatchedEpisodes[seasonNumber] = [];
-        } else {
-            newWatchedEpisodes[seasonNumber] = allEpisodeNumbers;
-        }
-
-        const updatedItem = {
-            ...itemToUpdate,
-            watchedEpisodes: newWatchedEpisodes,
-        };
-
-        set({
-            watchlist: watchlist.map((item) => (item.id === tvId ? updatedItem : item))
-        });
-
-        try {
-            await dbService.putWatchlistItem(updatedItem);
-        } catch (err) {
-            set({ watchlist: watchlist.map((item) => (item.id === tvId ? itemToUpdate : item)) });
-            toast.error("Failed to save progress. Please try again.");
-            console.error(err);
-        }
-    },
-
-    updateTags: async (mediaId, newTags) => {
-        const { watchlist } = get();
-        const itemToUpdate = await dbService.getWatchlistItem(mediaId);
-
-        if (itemToUpdate) {
-            pendingOps.add(mediaId);
-            const updatedItem = { ...itemToUpdate, tags: newTags };
-
-            set({
-                watchlist: watchlist.map((item) => (item.id === mediaId ? updatedItem : item))
-            });
-
-            await dbService.putWatchlistItem(updatedItem);
-        }
-    },
-
-    exportWatchlist: async () => {
-        try {
-            const itemsToExport = await dbService.getAllWatchlistItems();
-            const dataStr = JSON.stringify(itemsToExport, null, 2);
-            const dataBlob = new Blob([dataStr], { type: "application/json" });
-            const url = URL.createObjectURL(dataBlob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = `scenestack_watchlist_${new Date().toISOString().split("T")[0]}.json`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        } catch (err) {
-            toast.error("Failed to export watchlist.");
-            console.error(err);
-        }
-    },
-
-    importWatchlist: async (file) => {
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                try {
-                    const text = e.target?.result;
-                    if (typeof text !== "string") throw new Error("File content is not readable.");
-
-                    const importedData = JSON.parse(text) as WatchlistItem[];
-
-                    if (!Array.isArray(importedData)) {
-                        throw new Error("Invalid file format: Not an array.");
-                    }
-
-                    const strippedItems = importedData.map(item => {
-                        const copy = { ...item } as Record<string, unknown>;
-                        delete copy.images;
-                        delete copy.videos;
-                        delete copy.credits;
-                        delete copy.keywords;
-                        delete copy.recommendations;
-                        delete copy.similar;
-                        delete copy.reviews;
-                        return copy as unknown as WatchlistItem;
-                    });
-
-                    await dbService.clearAndBulkPut(strippedItems);
-                    set({ watchlist: strippedItems });
-                    resolve();
-                } catch (err) {
-                    toast.error("Import failed. Please ensure the file is a valid Scene Stack JSON export.");
-                    console.error(err);
-                    resolve();
-                }
-            };
-            reader.onerror = () => {
-                toast.error("Failed to read the selected file.");
-                resolve();
-            };
-            reader.readAsText(file);
-        });
-    },
-
-    fetchRecommendations: async (refresh = false) => {
-        const { watchlist } = get();
-
-        if (watchlist.length === 0) {
-            set({ recommendations: [] });
-            return;
-        }
-
-        set({ recommendationsLoading: true });
-
-        try {
-            const { recommendations } = await dbService.getRecommendations(refresh);
-            set({
-                recommendations,
-                recommendationsLoading: false
-            });
-        } catch (err) {
-            console.error("Failed to fetch recommendations:", err);
-            set({ recommendationsLoading: false });
-        }
-    },
-
-    removeFromWatchlist: async (id) => {
-        const { watchlist, pendingItems } = get();
-
-        if (pendingItems.has(id)) return;
-
-        const originalItem = watchlist.find((i) => i.id === id);
-        if (!originalItem) return;
-
-        const title = ('title' in originalItem ? originalItem.title : originalItem.name) || 'Item';
-        const newPending = new Set(pendingItems).add(id);
-        pendingOps.add(id);
-        set({
-            pendingItems: newPending,
-            watchlist: watchlist.filter((i) => i.id !== id)
-        });
-
-        try {
-            await dbService.deleteWatchlistItem(id);
-            toast.success(`"${title}" removed from list`);
-        } catch (err) {
-            set({ watchlist: [originalItem, ...get().watchlist] });
-            toast.error("Failed to remove item. Please try again.");
-            console.error(err);
-        } finally {
-            const updated = new Set(get().pendingItems);
-            updated.delete(id);
-            set({ pendingItems: updated });
-        }
-    },
-
-    // Socket Helpers - these handle incoming events from other clients
-    syncItem: (item) => {
-        if (pendingOps.has(item.id)) {
-            pendingOps.delete(item.id);
-            return;
-        }
-        const { watchlist } = get();
-        const exists = watchlist.some((i) => i.id === item.id);
-        if (exists) {
-            set({ watchlist: watchlist.map((i) => (i.id === item.id ? item : i)) });
-        } else {
-            set({ watchlist: [item, ...watchlist] });
-        }
-    },
-
-    onItemDeleted: (id) => {
-        if (pendingOps.has(id)) {
-            pendingOps.delete(id);
-            return;
-        }
-        const { watchlist } = get();
-        set({ watchlist: watchlist.filter((i) => i.id !== id) });
+      set({
+        watchlist: allItems,
+        isLoading: false,
+        paginationState: {
+          watchlist: { hasMore: watchlistRes.hasMore, page: 1, loading: false },
+          watching: { hasMore: watchingRes.hasMore, page: 1, loading: false },
+          watched: { hasMore: watchedRes.hasMore, page: 1, loading: false },
+        },
+      });
+      socketService.connect();
+    } catch (err) {
+      console.error("Failed to load watchlist from DB", err);
+      toast.error("Could not load your watchlist. Please try refreshing.");
+      set({ isLoading: false });
     }
+  },
+
+  loadMoreByStatus: async (status) => {
+    const { paginationState, watchlist } = get();
+    const categoryState = paginationState[status];
+
+    if (!categoryState.hasMore || categoryState.loading) return;
+
+    set({
+      paginationState: {
+        ...paginationState,
+        [status]: { ...categoryState, loading: true },
+      },
+    });
+
+    try {
+      const nextPage = categoryState.page + 1;
+      const response = await dbService.getWatchlistByStatus(status, nextPage, 20);
+
+      const existingIds = new Set(watchlist.map((i) => i.id));
+      const newItems = response.items.filter((item) => !existingIds.has(item.id));
+
+      set({
+        watchlist: [...watchlist, ...newItems],
+        paginationState: {
+          ...get().paginationState,
+          [status]: { hasMore: response.hasMore, page: nextPage, loading: false },
+        },
+      });
+    } catch (err) {
+      console.error(`Failed to load more ${status} items`, err);
+      set({
+        paginationState: {
+          ...get().paginationState,
+          [status]: { ...categoryState, loading: false },
+        },
+      });
+    }
+  },
+
+  toggleWatchlist: async (media) => {
+    const { watchlist } = get();
+    const exists = watchlist.some((item) => item.id === media.id);
+    pendingOps.add(media.id);
+
+    if (exists) {
+      try {
+        await dbService.deleteWatchlistItem(media.id);
+        set({ watchlist: watchlist.filter((item) => item.id !== media.id) });
+      } catch (err) {
+        toast.error("Failed to remove item from watchlist.");
+        console.error(err);
+      }
+    } else {
+      try {
+        const strippedMedia = stripMediaForStorage(media);
+        let newItem: WatchlistItem;
+        if (media.media_type === "movie") {
+          newItem = { ...strippedMedia, watched: false, tags: [] } as WatchlistItem;
+        } else {
+          newItem = { ...strippedMedia, watchedEpisodes: {}, tags: [] } as WatchlistItem;
+        }
+        await dbService.putWatchlistItem(newItem);
+        set({ watchlist: [newItem, ...watchlist] });
+      } catch (err) {
+        toast.error("Failed to add item to watchlist.");
+        console.error(err);
+      }
+    }
+  },
+
+  toggleWatchlistFromSearchResult: async (media) => {
+    const { watchlist, toggleWatchlist, pendingItems } = get();
+
+    if (pendingItems.has(media.id)) return;
+
+    const exists = watchlist.some((item) => item.id === media.id);
+    const newPending = new Set(pendingItems).add(media.id);
+    const title = media.title || media.name || "Item";
+    set({ pendingItems: newPending });
+
+    try {
+      if (exists) {
+        pendingOps.add(media.id);
+        await dbService.deleteWatchlistItem(media.id);
+        set({ watchlist: watchlist.filter((item) => item.id !== media.id) });
+        toast.success(`"${title}" removed from list`);
+      } else {
+        const details =
+          media.media_type === "movie"
+            ? await getMovieDetails(media.id)
+            : await getTVDetails(media.id);
+        await toggleWatchlist(details);
+        toast.success(`"${title}" added to list`);
+      }
+    } catch (err) {
+      toast.error(
+        exists ? "Failed to remove item from watchlist." : "Failed to add item to watchlist."
+      );
+      console.error(err);
+    } finally {
+      const updated = new Set(get().pendingItems);
+      updated.delete(media.id);
+      set({ pendingItems: updated });
+    }
+  },
+
+  toggleMovieWatched: async (movieId) => {
+    const { watchlist, pendingItems } = get();
+
+    if (pendingItems.has(movieId)) return;
+
+    const itemToUpdate = watchlist.find(
+      (item) => item.id === movieId && item.media_type === "movie"
+    ) as MovieWatchlistItem | undefined;
+
+    if (!itemToUpdate) return;
+
+    const newPending = new Set(pendingItems).add(movieId);
+    pendingOps.add(movieId);
+    const updatedItem = { ...itemToUpdate, watched: !itemToUpdate.watched };
+    const title = itemToUpdate.title || "Movie";
+
+    set({
+      pendingItems: newPending,
+      watchlist: watchlist.map((item) => (item.id === movieId ? updatedItem : item)),
+    });
+
+    try {
+      await dbService.putWatchlistItem(updatedItem);
+      toast.success(
+        updatedItem.watched ? `"${title}" marked as watched` : `"${title}" marked as unwatched`
+      );
+    } catch (err) {
+      set({ watchlist: watchlist.map((item) => (item.id === movieId ? itemToUpdate : item)) });
+      toast.error("Failed to save progress. Please try again.");
+      console.error(err);
+    } finally {
+      const updated = new Set(get().pendingItems);
+      updated.delete(movieId);
+      set({ pendingItems: updated });
+    }
+  },
+
+  toggleEpisodeWatched: async (tvId, seasonNumber, episodeNumber) => {
+    const { watchlist } = get();
+    const itemToUpdate = watchlist.find((item) => item.id === tvId && item.media_type === "tv") as
+      | TVWatchlistItem
+      | undefined;
+
+    if (!itemToUpdate) return;
+
+    pendingOps.add(tvId);
+
+    const newWatchedEpisodes = { ...(itemToUpdate.watchedEpisodes || {}) };
+    const seasonEpisodes = newWatchedEpisodes[seasonNumber]
+      ? [...newWatchedEpisodes[seasonNumber]]
+      : [];
+    const episodeIndex = seasonEpisodes.indexOf(episodeNumber);
+
+    if (episodeIndex > -1) {
+      seasonEpisodes.splice(episodeIndex, 1);
+    } else {
+      seasonEpisodes.push(episodeNumber);
+    }
+    newWatchedEpisodes[seasonNumber] = seasonEpisodes;
+
+    const updatedItem = {
+      ...itemToUpdate,
+      watchedEpisodes: newWatchedEpisodes,
+    };
+
+    set({
+      watchlist: watchlist.map((item) => (item.id === tvId ? updatedItem : item)),
+    });
+
+    try {
+      await dbService.putWatchlistItem(updatedItem);
+    } catch (err) {
+      set({ watchlist: watchlist.map((item) => (item.id === tvId ? itemToUpdate : item)) });
+      toast.error("Failed to save progress. Please try again.");
+      console.error(err);
+    }
+  },
+
+  toggleSeasonWatched: async (tvId, seasonNumber, allEpisodeNumbers) => {
+    const { watchlist } = get();
+    const itemToUpdate = watchlist.find((item) => item.id === tvId && item.media_type === "tv") as
+      | TVWatchlistItem
+      | undefined;
+
+    if (!itemToUpdate) return;
+
+    pendingOps.add(tvId);
+
+    const newWatchedEpisodes = { ...(itemToUpdate.watchedEpisodes || {}) };
+    const seasonEpisodes = newWatchedEpisodes[seasonNumber] || [];
+
+    if (seasonEpisodes.length === allEpisodeNumbers.length) {
+      newWatchedEpisodes[seasonNumber] = [];
+    } else {
+      newWatchedEpisodes[seasonNumber] = allEpisodeNumbers;
+    }
+
+    const updatedItem = {
+      ...itemToUpdate,
+      watchedEpisodes: newWatchedEpisodes,
+    };
+
+    set({
+      watchlist: watchlist.map((item) => (item.id === tvId ? updatedItem : item)),
+    });
+
+    try {
+      await dbService.putWatchlistItem(updatedItem);
+    } catch (err) {
+      set({ watchlist: watchlist.map((item) => (item.id === tvId ? itemToUpdate : item)) });
+      toast.error("Failed to save progress. Please try again.");
+      console.error(err);
+    }
+  },
+
+  updateTags: async (mediaId, newTags) => {
+    const { watchlist } = get();
+    const itemToUpdate = await dbService.getWatchlistItem(mediaId);
+
+    if (itemToUpdate) {
+      pendingOps.add(mediaId);
+      const updatedItem = { ...itemToUpdate, tags: newTags };
+
+      set({
+        watchlist: watchlist.map((item) => (item.id === mediaId ? updatedItem : item)),
+      });
+
+      await dbService.putWatchlistItem(updatedItem);
+    }
+  },
+
+  exportWatchlist: async () => {
+    try {
+      const itemsToExport = await dbService.getAllWatchlistItems();
+      const dataStr = JSON.stringify(itemsToExport, null, 2);
+      const dataBlob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `scenestack_watchlist_${new Date().toISOString().split("T")[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error("Failed to export watchlist.");
+      console.error(err);
+    }
+  },
+
+  importWatchlist: async (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const text = e.target?.result;
+          if (typeof text !== "string") throw new Error("File content is not readable.");
+
+          const importedData = JSON.parse(text) as WatchlistItem[];
+
+          if (!Array.isArray(importedData)) {
+            throw new Error("Invalid file format: Not an array.");
+          }
+
+          const strippedItems = importedData.map((item) => {
+            const copy = { ...item } as Record<string, unknown>;
+            delete copy.images;
+            delete copy.videos;
+            delete copy.credits;
+            delete copy.keywords;
+            delete copy.recommendations;
+            delete copy.similar;
+            delete copy.reviews;
+            return copy as unknown as WatchlistItem;
+          });
+
+          await dbService.clearAndBulkPut(strippedItems);
+          set({ watchlist: strippedItems });
+          resolve();
+        } catch (err) {
+          toast.error("Import failed. Please ensure the file is a valid Scene Stack JSON export.");
+          console.error(err);
+          resolve();
+        }
+      };
+      reader.onerror = () => {
+        toast.error("Failed to read the selected file.");
+        resolve();
+      };
+      reader.readAsText(file);
+    });
+  },
+
+  fetchRecommendations: async (refresh = false) => {
+    const { watchlist } = get();
+
+    if (watchlist.length === 0) {
+      set({ recommendations: [] });
+      return;
+    }
+
+    set({ recommendationsLoading: true });
+
+    try {
+      const { recommendations } = await dbService.getRecommendations(refresh);
+      set({
+        recommendations,
+        recommendationsLoading: false,
+      });
+    } catch (err) {
+      console.error("Failed to fetch recommendations:", err);
+      set({ recommendationsLoading: false });
+    }
+  },
+
+  removeFromWatchlist: async (id) => {
+    const { watchlist, pendingItems } = get();
+
+    if (pendingItems.has(id)) return;
+
+    const originalItem = watchlist.find((i) => i.id === id);
+    if (!originalItem) return;
+
+    const title = ("title" in originalItem ? originalItem.title : originalItem.name) || "Item";
+    const newPending = new Set(pendingItems).add(id);
+    pendingOps.add(id);
+    set({
+      pendingItems: newPending,
+      watchlist: watchlist.filter((i) => i.id !== id),
+    });
+
+    try {
+      await dbService.deleteWatchlistItem(id);
+      toast.success(`"${title}" removed from list`);
+    } catch (err) {
+      set({ watchlist: [originalItem, ...get().watchlist] });
+      toast.error("Failed to remove item. Please try again.");
+      console.error(err);
+    } finally {
+      const updated = new Set(get().pendingItems);
+      updated.delete(id);
+      set({ pendingItems: updated });
+    }
+  },
+
+  // Socket Helpers - these handle incoming events from other clients
+  syncItem: (item) => {
+    if (pendingOps.has(item.id)) {
+      pendingOps.delete(item.id);
+      return;
+    }
+    const { watchlist } = get();
+    const exists = watchlist.some((i) => i.id === item.id);
+    if (exists) {
+      set({ watchlist: watchlist.map((i) => (i.id === item.id ? item : i)) });
+    } else {
+      set({ watchlist: [item, ...watchlist] });
+    }
+  },
+
+  onItemDeleted: (id) => {
+    if (pendingOps.has(id)) {
+      pendingOps.delete(id);
+      return;
+    }
+    const { watchlist } = get();
+    set({ watchlist: watchlist.filter((i) => i.id !== id) });
+  },
 }));
 
 export const getWatchlistIds = (watchlist: WatchlistItem[]) =>
-    new Set(watchlist.map(item => item.id));
+  new Set(watchlist.map((item) => item.id));
 
 export const getFilteredItems = (watchlist: WatchlistItem[], activeTagFilter: string | null) => {
-    let filteredWatchlist = watchlist;
-    if (activeTagFilter) {
-        filteredWatchlist = watchlist.filter((item) =>
-            item.tags?.includes(activeTagFilter)
+  let filteredWatchlist = watchlist;
+  if (activeTagFilter) {
+    filteredWatchlist = watchlist.filter((item) => item.tags?.includes(activeTagFilter));
+  }
+
+  const watchlistItems: WatchlistItem[] = [];
+  const currentlyWatchingItems: TVWatchlistItem[] = [];
+  const watchedItems: WatchlistItem[] = [];
+
+  for (const item of filteredWatchlist) {
+    // Use server-computed status if available, otherwise compute locally
+    let status = item.watchlistStatus;
+    if (!status) {
+      if (item.media_type === "movie") {
+        status = item.watched ? "watched" : "watchlist";
+      } else {
+        const watchedCount = Object.values(item.watchedEpisodes || {}).reduce(
+          (acc, eps) => acc + (Array.isArray(eps) ? eps.length : 0),
+          0
         );
+        if (watchedCount === 0) status = "watchlist";
+        else if (watchedCount >= item.number_of_episodes) status = "watched";
+        else status = "watching";
+      }
     }
 
-    const watchlistItems: WatchlistItem[] = [];
-    const currentlyWatchingItems: TVWatchlistItem[] = [];
-    const watchedItems: WatchlistItem[] = [];
-
-    for (const item of filteredWatchlist) {
-        // Use server-computed status if available, otherwise compute locally
-        let status = item.watchlistStatus;
-        if (!status) {
-            if (item.media_type === "movie") {
-                status = item.watched ? "watched" : "watchlist";
-            } else {
-                const watchedCount = Object.values(item.watchedEpisodes || {}).reduce(
-                    (acc, eps) => acc + (Array.isArray(eps) ? eps.length : 0), 0
-                );
-                if (watchedCount === 0) status = "watchlist";
-                else if (watchedCount >= item.number_of_episodes) status = "watched";
-                else status = "watching";
-            }
-        }
-
-        if (status === "watched") {
-            watchedItems.push(item);
-        } else if (status === "watching" && item.media_type === "tv") {
-            currentlyWatchingItems.push(item);
-        } else {
-            watchlistItems.push(item);
-        }
+    if (status === "watched") {
+      watchedItems.push(item);
+    } else if (status === "watching" && item.media_type === "tv") {
+      currentlyWatchingItems.push(item);
+    } else {
+      watchlistItems.push(item);
     }
-    return { watchlistItems, currentlyWatchingItems, watchedItems };
+  }
+  return { watchlistItems, currentlyWatchingItems, watchedItems };
 };
 
 export const getProgressMap = (currentlyWatchingItems: TVWatchlistItem[]) => {
-    const map: Record<string, number> = {};
-    currentlyWatchingItems.forEach((item) => {
-        const watchedCount = Object.values(item.watchedEpisodes || {}).reduce(
-            (acc, eps) => acc + (Array.isArray(eps) ? eps.length : 0),
-            0
-        );
-        const progress =
-            item.number_of_episodes > 0
-                ? (watchedCount / item.number_of_episodes) * 100
-                : 0;
-        map[item.id] = progress;
-    });
-    return map;
+  const map: Record<string, number> = {};
+  currentlyWatchingItems.forEach((item) => {
+    const watchedCount = Object.values(item.watchedEpisodes || {}).reduce(
+      (acc, eps) => acc + (Array.isArray(eps) ? eps.length : 0),
+      0
+    );
+    const progress =
+      item.number_of_episodes > 0 ? (watchedCount / item.number_of_episodes) * 100 : 0;
+    map[item.id] = progress;
+  });
+  return map;
 };
 
 export const getAllUniqueTags = (watchlist: WatchlistItem[]) => {
-    const tags = new Set<string>();
-    watchlist.forEach((item) => {
-        item.tags?.forEach((tag) => tags.add(tag));
-    });
-    return Array.from(tags).sort();
+  const tags = new Set<string>();
+  watchlist.forEach((item) => {
+    item.tags?.forEach((tag) => tags.add(tag));
+  });
+  return Array.from(tags).sort();
 };
 
-
-
 export const formatWatchTime = (minutes: number): string => {
-    if (minutes === 0) return "0m";
+  if (minutes === 0) return "0m";
 
-    const days = Math.floor(minutes / (24 * 60));
-    const hours = Math.floor((minutes % (24 * 60)) / 60);
-    const mins = Math.floor(minutes % 60);
+  const days = Math.floor(minutes / (24 * 60));
+  const hours = Math.floor((minutes % (24 * 60)) / 60);
+  const mins = Math.floor(minutes % 60);
 
-    const parts: string[] = [];
-    if (days > 0) parts.push(`${days}d`);
-    if (hours > 0) parts.push(`${hours}h`);
-    if (mins > 0) parts.push(`${mins}m`);
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0) parts.push(`${hours}h`);
+  if (mins > 0) parts.push(`${mins}m`);
 
-    return parts.join(" ") || "0m";
+  return parts.join(" ") || "0m";
 };
 
 export interface WatchStatistics {
-    shows: {
-        totalWatchTimeMinutes: number;
-        totalEpisodes: number;
-        totalShows: number;
-    };
-    movies: {
-        totalWatchTimeMinutes: number;
-        totalMovies: number;
-    };
-    summary: {
-        currentlyWatching: number;
-        completionRate: number;
-        topGenres: { name: string; count: number }[];
-        averageRating: number;
-    };
+  shows: {
+    totalWatchTimeMinutes: number;
+    totalEpisodes: number;
+    totalShows: number;
+  };
+  movies: {
+    totalWatchTimeMinutes: number;
+    totalMovies: number;
+  };
+  summary: {
+    currentlyWatching: number;
+    completionRate: number;
+    topGenres: { name: string; count: number }[];
+    averageRating: number;
+  };
 }
 
 export const calculateWatchStats = (
-    watchlist: WatchlistItem[],
-    currentlyWatchingCount: number,
-    watchedItems: WatchlistItem[]
+  watchlist: WatchlistItem[],
+  currentlyWatchingCount: number,
+  watchedItems: WatchlistItem[]
 ): WatchStatistics => {
-    const AVG_EPISODE_RUNTIME = 45; // fallback
+  const AVG_EPISODE_RUNTIME = 45; // fallback
 
-    const movies = watchlist.filter((item): item is MovieWatchlistItem => item.media_type === "movie");
-    const tvShows = watchlist.filter((item): item is TVWatchlistItem => item.media_type === "tv");
+  const movies = watchlist.filter(
+    (item): item is MovieWatchlistItem => item.media_type === "movie"
+  );
+  const tvShows = watchlist.filter((item): item is TVWatchlistItem => item.media_type === "tv");
 
-    // Watched movies
-    const watchedMovies = movies.filter(m => m.watched);
-    const movieWatchTime = watchedMovies.reduce((acc, m) => acc + (m.runtime || 0), 0);
+  // Watched movies
+  const watchedMovies = movies.filter((m) => m.watched);
+  const movieWatchTime = watchedMovies.reduce((acc, m) => acc + (m.runtime || 0), 0);
 
-    // Watched TV episodes - use per-show runtime when available
-    let totalWatchedEpisodes = 0;
-    let totalWatchedShows = 0;
-    let tvWatchTime = 0;
+  // Watched TV episodes - use per-show runtime when available
+  let totalWatchedEpisodes = 0;
+  let totalWatchedShows = 0;
+  let tvWatchTime = 0;
 
-    tvShows.forEach(show => {
-        const episodeCount = Object.values(show.watchedEpisodes || {}).reduce(
-            (acc, eps) => acc + (Array.isArray(eps) ? eps.length : 0),
-            0
-        );
-        if (episodeCount > 0) {
-            totalWatchedEpisodes += episodeCount;
-            // Use show's episode_run_time if available, otherwise fallback to average
-            const episodeRuntime = show.episode_run_time?.[0] || AVG_EPISODE_RUNTIME;
-            tvWatchTime += episodeCount * episodeRuntime;
-            if (episodeCount >= show.number_of_episodes) {
-                totalWatchedShows++;
-            }
-        }
+  tvShows.forEach((show) => {
+    const episodeCount = Object.values(show.watchedEpisodes || {}).reduce(
+      (acc, eps) => acc + (Array.isArray(eps) ? eps.length : 0),
+      0
+    );
+    if (episodeCount > 0) {
+      totalWatchedEpisodes += episodeCount;
+      // Use show's episode_run_time if available, otherwise fallback to average
+      const episodeRuntime = show.episode_run_time?.[0] || AVG_EPISODE_RUNTIME;
+      tvWatchTime += episodeCount * episodeRuntime;
+      if (episodeCount >= show.number_of_episodes) {
+        totalWatchedShows++;
+      }
+    }
+  });
+  const totalItems = watchlist.length;
+  const completedItems = watchedItems.length;
+  const completionRate = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+
+  // Genre breakdown
+  const genreCounts: Record<string, number> = {};
+  watchedItems.forEach((item) => {
+    item.genres?.forEach((genre) => {
+      genreCounts[genre.name] = (genreCounts[genre.name] || 0) + 1;
     });
-    const totalItems = watchlist.length;
-    const completedItems = watchedItems.length;
-    const completionRate = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+  });
+  const topGenres = Object.entries(genreCounts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
 
-    // Genre breakdown
-    const genreCounts: Record<string, number> = {};
-    watchedItems.forEach(item => {
-        item.genres?.forEach(genre => {
-            genreCounts[genre.name] = (genreCounts[genre.name] || 0) + 1;
-        });
-    });
-    const topGenres = Object.entries(genreCounts)
-        .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5);
+  const ratings = watchedItems.map((item) => item.vote_average).filter((r) => r > 0);
+  const averageRating =
+    ratings.length > 0
+      ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10
+      : 0;
 
-    const ratings = watchedItems.map(item => item.vote_average).filter(r => r > 0);
-    const averageRating = ratings.length > 0
-        ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10
-        : 0;
-
-    return {
-        shows: {
-            totalWatchTimeMinutes: tvWatchTime,
-            totalEpisodes: totalWatchedEpisodes,
-            totalShows: totalWatchedShows,
-        },
-        movies: {
-            totalWatchTimeMinutes: movieWatchTime,
-            totalMovies: watchedMovies.length,
-        },
-        summary: {
-            currentlyWatching: currentlyWatchingCount,
-            completionRate,
-            topGenres,
-            averageRating,
-        },
-    };
+  return {
+    shows: {
+      totalWatchTimeMinutes: tvWatchTime,
+      totalEpisodes: totalWatchedEpisodes,
+      totalShows: totalWatchedShows,
+    },
+    movies: {
+      totalWatchTimeMinutes: movieWatchTime,
+      totalMovies: watchedMovies.length,
+    },
+    summary: {
+      currentlyWatching: currentlyWatchingCount,
+      completionRate,
+      topGenres,
+      averageRating,
+    },
+  };
 };
 
 // ============================================================================
 // INITIALIZATION HOOK - Call this once at app root
 // ============================================================================
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from "react";
 
 export const useWatchlistInit = () => {
-    const loadWatchlist = useWatchlistStore(state => state.loadWatchlist);
-    const syncItem = useWatchlistStore(state => state.syncItem);
-    const onItemDeleted = useWatchlistStore(state => state.onItemDeleted);
+  const loadWatchlist = useWatchlistStore((state) => state.loadWatchlist);
+  const syncItem = useWatchlistStore((state) => state.syncItem);
+  const onItemDeleted = useWatchlistStore((state) => state.onItemDeleted);
 
-    useEffect(() => {
-        loadWatchlist();
+  useEffect(() => {
+    loadWatchlist();
 
-        return () => {
-            socketService.disconnect();
-        };
-    }, [loadWatchlist]);
+    return () => {
+      socketService.disconnect();
+    };
+  }, [loadWatchlist]);
 
-    useEffect(() => {
-        const unsubUpdate = socketService.onUpdate((item) => {
-            syncItem(item);
-        });
+  useEffect(() => {
+    const unsubUpdate = socketService.onUpdate((item) => {
+      syncItem(item);
+    });
 
-        const unsubDelete = socketService.onDelete(({ id }) => {
-            onItemDeleted(id);
-        });
+    const unsubDelete = socketService.onDelete(({ id }) => {
+      onItemDeleted(id);
+    });
 
-        const unsubSync = socketService.onSync(() => {
-            loadWatchlist();
-        });
+    const unsubSync = socketService.onSync(() => {
+      loadWatchlist();
+    });
 
-        return () => {
-            unsubUpdate();
-            unsubDelete();
-            unsubSync();
-        };
-    }, [syncItem, onItemDeleted, loadWatchlist]);
+    return () => {
+      unsubUpdate();
+      unsubDelete();
+      unsubSync();
+    };
+  }, [syncItem, onItemDeleted, loadWatchlist]);
 };
 
 // ============================================================================
@@ -704,28 +711,28 @@ export const useWatchlistInit = () => {
 // ============================================================================
 
 export const useWatchlistIds = () => {
-    const watchlist = useWatchlistStore(state => state.watchlist);
-    return useMemo(() => getWatchlistIds(watchlist), [watchlist]);
+  const watchlist = useWatchlistStore((state) => state.watchlist);
+  return useMemo(() => getWatchlistIds(watchlist), [watchlist]);
 };
 
 export const useWatchlistLoading = (): boolean => {
-    return useWatchlistStore(state => state.isLoading);
+  return useWatchlistStore((state) => state.isLoading);
 };
 
 export const useWatchlist = (): WatchlistItem[] => {
-    return useWatchlistStore(state => state.watchlist);
+  return useWatchlistStore((state) => state.watchlist);
 };
 
 export const useProgressMap = () => {
-    const watchlist = useWatchlistStore(state => state.watchlist);
-    const { currentlyWatchingItems } = useMemo(() => getFilteredItems(watchlist, null), [watchlist]);
-    return useMemo(() => getProgressMap(currentlyWatchingItems), [currentlyWatchingItems]);
+  const watchlist = useWatchlistStore((state) => state.watchlist);
+  const { currentlyWatchingItems } = useMemo(() => getFilteredItems(watchlist, null), [watchlist]);
+  return useMemo(() => getProgressMap(currentlyWatchingItems), [currentlyWatchingItems]);
 };
 
 export const usePendingItems = () => {
-    return useWatchlistStore(state => state.pendingItems);
+  return useWatchlistStore((state) => state.pendingItems);
 };
 
 export const useIsItemPending = (itemId: number) => {
-    return useWatchlistStore(state => state.pendingItems.has(itemId));
+  return useWatchlistStore((state) => state.pendingItems.has(itemId));
 };

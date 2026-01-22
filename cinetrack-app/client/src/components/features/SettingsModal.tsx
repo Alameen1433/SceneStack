@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import { useAuthContext, getAuthToken } from "../../contexts/AuthContext";
+import { useAuthContext } from "../../contexts/AuthContext";
 import { ConfirmModal } from "../common/ConfirmModal";
 import {
   FiEye,
@@ -17,11 +17,11 @@ import {
   FiAlertTriangle,
   FiChevronRight,
   FiChevronDown,
-  FiClock
+  FiClock,
 } from "react-icons/fi";
 
 // API requests use relative URLs - Vite proxy handles forwarding in dev
-const API_BASE_URL = '';
+const API_BASE_URL = "";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -54,11 +54,7 @@ const PasswordInput: React.FC<{
         className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-brand-text-dim hover:text-white transition-colors"
         aria-label={showPassword ? "Hide password" : "Show password"}
       >
-        {showPassword ? (
-          <FiEyeOff className="h-5 w-5" />
-        ) : (
-          <FiEye className="h-5 w-5" />
-        )}
+        {showPassword ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
       </button>
     </div>
   );
@@ -77,15 +73,14 @@ const StorageStats: React.FC = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const token = getAuthToken();
-        const response = await fetch('/api/watchlist/stats', {
-          headers: { Authorization: `Bearer ${token}` },
+        const response = await fetch("/api/watchlist/stats", {
+          credentials: "include",
         });
-        if (!response.ok) throw new Error('Failed to fetch stats');
+        if (!response.ok) throw new Error("Failed to fetch stats");
         const data = await response.json();
         setStats(data);
       } catch (err) {
-        setError('Unable to load storage info');
+        setError("Unable to load storage info");
         console.error(err);
       } finally {
         setIsLoading(false);
@@ -95,11 +90,11 @@ const StorageStats: React.FC = () => {
   }, []);
 
   const formatBytes = (bytes: number) => {
-    if (bytes === 0) return '0 B';
+    if (bytes === 0) return "0 B";
     const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const sizes = ["B", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   return (
@@ -168,7 +163,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = originalOverflow;
     };
@@ -197,12 +192,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
     setIsProcessingDanger(true);
     try {
-      const token = getAuthToken();
-
       if (dangerAction === "wipe") {
         const response = await fetch(`${API_BASE_URL}/api/watchlist`, {
           method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
         });
         if (!response.ok) throw new Error("Failed to wipe watchlist");
 
@@ -212,7 +205,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       } else {
         const response = await fetch(`${API_BASE_URL}/api/auth`, {
           method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
         });
         if (!response.ok) throw new Error("Failed to delete account");
 
@@ -222,7 +215,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       }
     } catch (error) {
       console.error(`Failed to ${dangerAction}:`, error);
-      alert(`Failed to ${dangerAction === "wipe" ? "wipe watchlist" : "delete account"}. Please try again.`);
+      alert(
+        `Failed to ${dangerAction === "wipe" ? "wipe watchlist" : "delete account"}. Please try again.`
+      );
     } finally {
       setIsProcessingDanger(false);
     }
@@ -251,13 +246,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setIsChangingPassword(true);
 
     try {
-      const token = getAuthToken();
       const response = await fetch(`${API_BASE_URL}/api/auth/password`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
+        credentials: "include",
         body: JSON.stringify({ currentPassword, newPassword }),
       });
 
@@ -270,7 +264,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setPasswordError(data.message || "Failed to change password. Please try again.");
       }
     } catch {
-      setPasswordError("Unable to connect to the server. Please check your connection and try again.");
+      setPasswordError(
+        "Unable to connect to the server. Please check your connection and try again."
+      );
     } finally {
       setIsChangingPassword(false);
     }
@@ -340,7 +336,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               {/* Change Password Toggle - hidden for demo users */}
               {!user?.isDemo && !showPasswordForm ? (
                 <button
-                  onClick={() => { setShowPasswordForm(true); setPasswordSuccess(false); }}
+                  onClick={() => {
+                    setShowPasswordForm(true);
+                    setPasswordSuccess(false);
+                  }}
                   className="w-full mt-4 py-2 px-4 rounded-lg font-medium transition-colors bg-white/10 hover:bg-white/20 text-white flex items-center justify-center gap-2"
                 >
                   <FiKey className="h-4 w-4" />
@@ -359,8 +358,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className="flex items-start gap-2 p-3 bg-green-500/20 border border-green-500/30 rounded-lg">
                       <FiCheckCircle className="h-5 w-5 text-green-400 shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-green-400 text-sm font-medium">Password updated successfully!</p>
-                        <p className="text-green-400/70 text-xs mt-1">Your new password is now active. Use it the next time you log in.</p>
+                        <p className="text-green-400 text-sm font-medium">
+                          Password updated successfully!
+                        </p>
+                        <p className="text-green-400/70 text-xs mt-1">
+                          Your new password is now active. Use it the next time you log in.
+                        </p>
                       </div>
                     </div>
                   )}
@@ -368,7 +371,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   {!passwordSuccess && (
                     <>
                       <div>
-                        <label className="block text-xs text-brand-text-dim mb-1.5">Current Password</label>
+                        <label className="block text-xs text-brand-text-dim mb-1.5">
+                          Current Password
+                        </label>
                         <PasswordInput
                           value={currentPassword}
                           onChange={setCurrentPassword}
@@ -376,7 +381,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-brand-text-dim mb-1.5">New Password</label>
+                        <label className="block text-xs text-brand-text-dim mb-1.5">
+                          New Password
+                        </label>
                         <PasswordInput
                           value={newPassword}
                           onChange={setNewPassword}
@@ -385,7 +392,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-brand-text-dim mb-1.5">Confirm New Password</label>
+                        <label className="block text-xs text-brand-text-dim mb-1.5">
+                          Confirm New Password
+                        </label>
                         <PasswordInput
                           value={confirmPassword}
                           onChange={setConfirmPassword}
@@ -459,10 +468,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <button
                 onClick={user?.isDemo ? undefined : onExport}
                 disabled={user?.isDemo}
-                className={`flex-1 py-2.5 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${user?.isDemo
+                className={`flex-1 py-2.5 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                  user?.isDemo
                     ? "bg-white/5 text-brand-text-dim cursor-not-allowed"
                     : "bg-brand-primary hover:bg-brand-secondary text-white hover:scale-[1.02] active:scale-[0.98]"
-                  }`}
+                }`}
               >
                 <FiDownload className="h-5 w-5" />
                 Export
@@ -470,10 +480,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <button
                 onClick={user?.isDemo ? undefined : handleImportClick}
                 disabled={user?.isDemo}
-                className={`flex-1 py-2.5 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${user?.isDemo
+                className={`flex-1 py-2.5 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                  user?.isDemo
                     ? "bg-white/5 text-brand-text-dim cursor-not-allowed"
                     : "bg-white/10 hover:bg-white/20 text-white hover:scale-[1.02] active:scale-[0.98]"
-                  }`}
+                }`}
               >
                 <FiUpload className="h-5 w-5" />
                 Import
@@ -578,14 +589,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               {dangerAction === "wipe" ? "Wipe Watchlist?" : "Delete Account?"}
             </h3>
             <p className="text-brand-text-dim text-sm mb-6">
-              This action cannot be undone. This will permanently delete your {dangerAction === "wipe" ? "entire watchlist history" : "account and all associated data"}.
+              This action cannot be undone. This will permanently delete your{" "}
+              {dangerAction === "wipe"
+                ? "entire watchlist history"
+                : "account and all associated data"}
+              .
             </p>
 
             <div className="mb-6">
               <label className="block text-xs text-brand-text-dim mb-2">
-                Type <span className="text-white font-mono bg-white/10 px-1 rounded">
+                Type{" "}
+                <span className="text-white font-mono bg-white/10 px-1 rounded">
                   {dangerAction === "wipe" ? "delete my watchlist" : "delete my account"}
-                </span> to confirm
+                </span>{" "}
+                to confirm
               </label>
               <input
                 type="text"
@@ -607,7 +624,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <button
                 onClick={handleDangerAction}
                 disabled={
-                  confirmationText !== (dangerAction === "wipe" ? "delete my watchlist" : "delete my account") ||
+                  confirmationText !==
+                    (dangerAction === "wipe" ? "delete my watchlist" : "delete my account") ||
                   isProcessingDanger
                 }
                 className="flex-1 py-2 rounded-lg font-medium bg-red-500 hover:bg-red-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"

@@ -55,10 +55,7 @@ const NavItem: React.FC<{
   </button>
 );
 
-export const BottomNavBar: React.FC<BottomNavBarProps> = ({
-  activeTab,
-  onTabChange,
-}) => {
+export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChange }) => {
   const navItems = [
     { id: "discover", label: "Discover", icon: <FiCompass className="h-5 w-5" /> },
     { id: "lists", label: "My List", icon: <FiList className="h-5 w-5" /> },
@@ -71,14 +68,15 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
       <div
         className="relative overflow-hidden rounded-[28px] border border-white/10 shadow-2xl shadow-black/30"
         style={{
-          background: 'linear-gradient(to bottom, rgba(22, 22, 24, 0.75), rgba(10, 10, 11, 0.85))',
-          backdropFilter: 'blur(40px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+          background: "linear-gradient(to bottom, rgba(22, 22, 24, 0.75), rgba(10, 10, 11, 0.85))",
+          backdropFilter: "blur(40px) saturate(180%)",
+          WebkitBackdropFilter: "blur(40px) saturate(180%)",
         }}
       >
-        <div className="absolute inset-0 rounded-[28px] pointer-events-none"
+        <div
+          className="absolute inset-0 rounded-[28px] pointer-events-none"
           style={{
-            background: 'linear-gradient(to bottom, rgba(255,255,255,0.08) 0%, transparent 50%)',
+            background: "linear-gradient(to bottom, rgba(255,255,255,0.08) 0%, transparent 50%)",
           }}
         />
 

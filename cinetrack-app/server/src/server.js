@@ -8,6 +8,7 @@ const cors = require("cors");
 const rateLimit = require("express-rate-limit");
 const path = require("path");
 const helmet = require("helmet");
+const cookieParser = require("cookie-parser");
 const compression = require("compression");
 const morgan = require("morgan");
 
@@ -28,9 +29,20 @@ const io = new Server(server, {
   },
 });
 
-// Socket.IO authentication middleware
+const parseCookies = (cookieHeader) => {
+  const cookies = {};
+  if (!cookieHeader) return cookies;
+  cookieHeader.split(";").forEach((cookie) => {
+    const [name, ...rest] = cookie.trim().split("=");
+    if (name) cookies[name] = rest.join("=");
+  });
+  return cookies;
+};
+
 io.use((socket, next) => {
-  const token = socket.handshake.auth.token;
+  const cookies = parseCookies(socket.handshake.headers.cookie);
+  const token = cookies["scenestack_token"] || socket.handshake.auth.token;
+
   if (!token) {
     return next(new Error("Authentication required"));
   }
@@ -91,6 +103,7 @@ app.use(
   })
 );
 app.use(express.json({ limit: "2mb" }));
+app.use(cookieParser());
 
 // Disable caching for API routes (including Cloudflare edge)
 app.use("/api", (req, res, next) => {
@@ -184,14 +197,12 @@ app.use("/api/watchlist", (req, res, next) => {
 // --- TMDB Proxy Routes ---
 app.use("/api/tmdb", tmdbRoutes);
 
-
-
 // --- Catch-all for SPA ---
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "../../client/dist/index.html"));
 });
 
-// --- Global Error Handler (must be last) ---
+// --- Global Error Handler ---
 app.use(errorHandler);
 
 // --- Start Server ---

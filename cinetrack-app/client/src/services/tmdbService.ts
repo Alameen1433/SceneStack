@@ -60,15 +60,8 @@ interface DiscoverData {
   popularTV: SearchResult[];
 }
 
-let cachedDiscover: DiscoverData | null = null;
-
-const fetchDiscoverData = async (): Promise<DiscoverData> => {
-  if (cachedDiscover) return cachedDiscover;
-
-  const data = await fetchFromProxy<DiscoverData>("/discover");
-  cachedDiscover = data;
-  setTimeout(() => { cachedDiscover = null; }, 5 * 60 * 1000);
-  return data;
+const fetchDiscoverData = (): Promise<DiscoverData> => {
+  return fetchFromProxy<DiscoverData>("/discover");
 };
 
 export const getTrendingMedia = async (): Promise<SearchResult[]> => {
@@ -108,37 +101,24 @@ export const getWatchProviders = async (
   return fetchFromProxy<WatchProvidersResponse>(`/providers/${media_type}/${id}`);
 };
 
-export const getMovieRecommendations = async (
-  id: number
-): Promise<SearchResult[]> => {
-  const data = await fetchFromProxy<{ results: SearchResult[] }>(
-    `/recommendations/movie/${id}`
-  );
+export const getMovieRecommendations = async (id: number): Promise<SearchResult[]> => {
+  const data = await fetchFromProxy<{ results: SearchResult[] }>(`/recommendations/movie/${id}`);
   return data.results;
 };
 
-export const getTVRecommendations = async (
-  id: number
-): Promise<SearchResult[]> => {
-  const data = await fetchFromProxy<{ results: SearchResult[] }>(
-    `/recommendations/tv/${id}`
-  );
+export const getTVRecommendations = async (id: number): Promise<SearchResult[]> => {
+  const data = await fetchFromProxy<{ results: SearchResult[] }>(`/recommendations/tv/${id}`);
   return data.results;
 };
 
-export const getMediaImages = async (
-  id: number,
-  media_type: "movie" | "tv"
-) => {
+export const getMediaImages = async (id: number, media_type: "movie" | "tv") => {
   return fetchFromProxy<{ logos: LogoImage[] }>(`/images/${media_type}/${id}`);
 };
 
 export const getBestLogo = (logos?: LogoImage[]): LogoImage | null => {
   if (!logos || logos.length === 0) return null;
 
-  let bestLogo = logos.find(
-    (l) => l.iso_639_1 === "en" && l.file_path.endsWith(".svg")
-  );
+  let bestLogo = logos.find((l) => l.iso_639_1 === "en" && l.file_path.endsWith(".svg"));
   if (bestLogo) return bestLogo;
 
   bestLogo = logos.find((l) => l.file_path.endsWith(".svg"));
@@ -150,23 +130,21 @@ export const getBestLogo = (logos?: LogoImage[]): LogoImage | null => {
   return logos[0];
 };
 
-export const getBestTrailer = (videos?: { results: { site: string; type: string; official: boolean; key: string }[] }): { site: string; type: string; official: boolean; key: string } | null => {
+export const getBestTrailer = (videos?: {
+  results: { site: string; type: string; official: boolean; key: string }[];
+}): { site: string; type: string; official: boolean; key: string } | null => {
   const videoList = videos?.results;
   if (!videoList) return null;
 
   const youtubeVideos = videoList.filter((v) => v.site === "YouTube");
 
-  const officialTrailer = youtubeVideos.find(
-    (v) => v.type === "Trailer" && v.official
-  );
+  const officialTrailer = youtubeVideos.find((v) => v.type === "Trailer" && v.official);
   if (officialTrailer) return officialTrailer;
 
   const anyTrailer = youtubeVideos.find((v) => v.type === "Trailer");
   if (anyTrailer) return anyTrailer;
 
-  const officialTeaser = youtubeVideos.find(
-    (v) => v.type === "Teaser" && v.official
-  );
+  const officialTeaser = youtubeVideos.find((v) => v.type === "Teaser" && v.official);
   if (officialTeaser) return officialTeaser;
 
   const anyTeaser = youtubeVideos.find((v) => v.type === "Teaser");
@@ -175,7 +153,9 @@ export const getBestTrailer = (videos?: { results: { site: string; type: string;
   return null;
 };
 
-export const combineRentBuyProviders = (providers?: WatchProviderCountry | null): WatchProvider[] => {
+export const combineRentBuyProviders = (
+  providers?: WatchProviderCountry | null
+): WatchProvider[] => {
   if (!providers) return [];
 
   const combined = new Map<number, WatchProvider>();
@@ -203,7 +183,10 @@ export const getCachedLogo = (id: number): string | null | undefined => {
   return logoCache.get(id);
 };
 
-export const fetchAndCacheLogo = async (id: number, media_type: "movie" | "tv"): Promise<string | null> => {
+export const fetchAndCacheLogo = async (
+  id: number,
+  media_type: "movie" | "tv"
+): Promise<string | null> => {
   if (logoCache.has(id)) {
     return logoCache.get(id) || null;
   }

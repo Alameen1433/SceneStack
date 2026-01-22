@@ -1,37 +1,23 @@
 import type { WatchlistItem } from "../types/types";
-import { getAuthToken } from "../contexts/AuthContext";
 
-// API requests use relative URLs - Vite proxy handles forwarding in dev
-const API_BASE_URL = '/api';
+const API_BASE_URL = "/api";
 
-const apiFetch = async <T>(
-  endpoint: string,
-  options?: RequestInit
-): Promise<T> => {
-  const token = getAuthToken();
-
+const apiFetch = async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
   };
 
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     headers,
+    credentials: "include",
     ...options,
   });
 
   if (!response.ok) {
-    const errorData = await response
-      .json()
-      .catch(() => ({ message: "An unknown error occurred" }));
+    const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
     console.error("API Error:", errorData);
-    throw new Error(
-      errorData.message || `Request failed with status ${response.status}`
-    );
+    throw new Error(errorData.message || `Request failed with status ${response.status}`);
   }
 
   if (response.status === 204) {
@@ -45,9 +31,7 @@ export const getAllWatchlistItems = async (): Promise<WatchlistItem[]> => {
   return apiFetch<WatchlistItem[]>("/watchlist");
 };
 
-export const getWatchlistItem = async (
-  id: number
-): Promise<WatchlistItem | undefined> => {
+export const getWatchlistItem = async (id: number): Promise<WatchlistItem | undefined> => {
   try {
     return await apiFetch<WatchlistItem>(`/watchlist/${id}`);
   } catch (error) {
@@ -59,9 +43,7 @@ export const getWatchlistItem = async (
   }
 };
 
-export const putWatchlistItem = async (
-  item: WatchlistItem
-): Promise<number> => {
+export const putWatchlistItem = async (item: WatchlistItem): Promise<number> => {
   const savedItem = await apiFetch<WatchlistItem>("/watchlist", {
     method: "PUT",
     body: JSON.stringify(item),
@@ -75,9 +57,7 @@ export const deleteWatchlistItem = async (id: number): Promise<void> => {
   });
 };
 
-export const clearAndBulkPut = async (
-  items: WatchlistItem[]
-): Promise<void> => {
+export const clearAndBulkPut = async (items: WatchlistItem[]): Promise<void> => {
   await apiFetch<void>("/watchlist/import", {
     method: "POST",
     body: JSON.stringify(items),
@@ -98,18 +78,14 @@ export const getWatchlistByStatus = async (
   page = 1,
   limit = 20
 ): Promise<PaginatedResponse> => {
-  return apiFetch<PaginatedResponse>(
-    `/watchlist/by-status/${status}?page=${page}&limit=${limit}`
-  );
+  return apiFetch<PaginatedResponse>(`/watchlist/by-status/${status}?page=${page}&limit=${limit}`);
 };
 
 interface RecommendationsResponse {
   recommendations: import("../types/types").SearchResult[];
 }
 
-export const getRecommendations = async (
-  refresh = false
-): Promise<RecommendationsResponse> => {
+export const getRecommendations = async (refresh = false): Promise<RecommendationsResponse> => {
   return apiFetch<RecommendationsResponse>(
     `/watchlist/recommendations${refresh ? "?refresh=true" : ""}`
   );

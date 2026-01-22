@@ -7,14 +7,8 @@ interface LoadingPosterAnimationProps {
   rect: DOMRect;
 }
 
-export const LoadingPosterAnimation: React.FC<LoadingPosterAnimationProps> = ({
-  media,
-  rect,
-}) => {
-  const targetWidth = useMemo(
-    () => Math.min(250, window.innerWidth * 0.65),
-    []
-  );
+export const LoadingPosterAnimation: React.FC<LoadingPosterAnimationProps> = ({ media, rect }) => {
+  const targetWidth = useMemo(() => Math.min(250, window.innerWidth * 0.65), []);
 
   // Calculate the center of the viewport
   const viewportCenterX = window.innerWidth / 2;
@@ -80,9 +74,7 @@ export const LoadingPosterAnimation: React.FC<LoadingPosterAnimationProps> = ({
           zIndex: 50,
           borderRadius: "0.75rem",
           overflow: "hidden",
-          boxShadow: isAnimating
-            ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)"
-            : "none",
+          boxShadow: isAnimating ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : "none",
           // Only hint transform for GPU layer promotion
           willChange: "transform",
         }}

@@ -11,7 +11,7 @@ import {
   FiGithub,
   FiLogOut,
   FiLock,
-  FiUnlock
+  FiUnlock,
 } from "react-icons/fi";
 
 interface NavItemProps {
@@ -22,34 +22,25 @@ interface NavItemProps {
   onClick: () => void;
 }
 
-const NavItem: React.FC<NavItemProps> = ({
-  label,
-  icon,
-  isActive,
-  isCollapsed,
-  onClick,
-}) => (
+const NavItem: React.FC<NavItemProps> = ({ label, icon, isActive, isCollapsed, onClick }) => (
   <li>
     <button
       onClick={onClick}
       title={isCollapsed ? label : undefined}
-      className={`group flex items-center w-full px-3 py-2.5 my-0.5 rounded-lg transition-all duration-200 ${isActive
-        ? "bg-brand-primary/15 text-brand-primary border-l-2 border-brand-primary"
-        : "text-brand-text-dim hover:bg-white/5 hover:text-white"
-        }`}
+      className={`group flex items-center w-full px-3 py-2.5 my-0.5 rounded-lg transition-all duration-200 ${
+        isActive
+          ? "bg-brand-primary/15 text-brand-primary border-l-2 border-brand-primary"
+          : "text-brand-text-dim hover:bg-white/5 hover:text-white"
+      }`}
       aria-current={isActive ? "page" : undefined}
     >
-      <div className={`flex-shrink-0 w-5 h-5 transition-transform duration-200 ${!isActive && "group-hover:scale-110"}`}>
+      <div
+        className={`flex-shrink-0 w-5 h-5 transition-transform duration-200 ${!isActive && "group-hover:scale-110"}`}
+      >
         {icon}
       </div>
-      {!isCollapsed && (
-        <span className="ml-3 text-sm font-medium whitespace-nowrap">
-          {label}
-        </span>
-      )}
-      {isActive && !isCollapsed && (
-        <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white" />
-      )}
+      {!isCollapsed && <span className="ml-3 text-sm font-medium whitespace-nowrap">{label}</span>}
+      {isActive && !isCollapsed && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white" />}
     </button>
   </li>
 );
@@ -105,8 +96,9 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
       <aside
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`hidden lg:flex flex-col fixed left-0 top-0 h-screen bg-brand-bg/95 backdrop-blur-xl border-r border-white/5 transition-all duration-300 ease-out z-40 ${!isExpanded ? "w-16" : "w-56"
-          }`}
+        className={`hidden lg:flex flex-col fixed left-0 top-0 h-screen bg-brand-bg/95 backdrop-blur-xl border-r border-white/5 transition-all duration-300 ease-out z-40 ${
+          !isExpanded ? "w-16" : "w-56"
+        }`}
       >
         {/* Header with logo and collapse toggle */}
         <div className="flex items-center justify-between p-4 border-b border-white/5">
@@ -139,7 +131,9 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                 icon={item.icon}
                 isActive={activeTab === item.id}
                 isCollapsed={!isExpanded}
-                onClick={() => onTabChange(item.id as "discover" | "lists" | "recommendations" | "stats")}
+                onClick={() =>
+                  onTabChange(item.id as "discover" | "lists" | "recommendations" | "stats")
+                }
               />
             ))}
           </ul>
@@ -162,7 +156,9 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
           >
             <FiBell className="w-5 h-5" />
             {isExpanded && <span className="ml-3 text-sm font-medium">Notifications</span>}
-            <span className={`absolute ${!isExpanded ? "top-2 right-2" : "top-2.5 left-6"} w-2 h-2 bg-brand-primary rounded-full`} />
+            <span
+              className={`absolute ${!isExpanded ? "top-2 right-2" : "top-2.5 left-6"} w-2 h-2 bg-brand-primary rounded-full`}
+            />
           </button>
           <a
             href="https://github.com/Alameen1433"

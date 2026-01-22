@@ -10,8 +10,21 @@ import type {
   WatchProviderCountry,
 } from "../../types/types";
 import { EpisodeTracker } from "../features/EpisodeTracker";
-import { getWatchProviders, getBestLogo, getBestTrailer, combineRentBuyProviders } from "../../services/tmdbService";
-import { FiImage, FiArrowLeft, FiExternalLink, FiPlus, FiCheck, FiPlay, FiCheckCircle } from "react-icons/fi";
+import {
+  getWatchProviders,
+  getBestLogo,
+  getBestTrailer,
+  combineRentBuyProviders,
+} from "../../services/tmdbService";
+import {
+  FiImage,
+  FiArrowLeft,
+  FiExternalLink,
+  FiPlus,
+  FiCheck,
+  FiPlay,
+  FiCheckCircle,
+} from "react-icons/fi";
 
 interface MediaDetailModalProps {
   media: MovieDetail | TVDetail;
@@ -20,21 +33,10 @@ interface MediaDetailModalProps {
   onClose: () => void;
   onToggleWatchlist: (media: MovieDetail | TVDetail) => void;
   onToggleMovieWatched: (movieId: number) => void;
-  onToggleEpisodeWatched: (
-    tvId: number,
-    seasonNumber: number,
-    episodeNumber: number
-  ) => void;
-  getSeasonDetails: (
-    tvId: number,
-    seasonNumber: number
-  ) => Promise<SeasonDetail>;
+  onToggleEpisodeWatched: (tvId: number, seasonNumber: number, episodeNumber: number) => void;
+  getSeasonDetails: (tvId: number, seasonNumber: number) => Promise<SeasonDetail>;
   onSearch: (query: string) => void;
-  onToggleSeasonWatched: (
-    tvId: number,
-    seasonNumber: number,
-    episodeNumbers: number[]
-  ) => void;
+  onToggleSeasonWatched: (tvId: number, seasonNumber: number, episodeNumbers: number[]) => void;
   onUpdateTags: (mediaId: number, newTags: string[]) => void;
 }
 
@@ -62,9 +64,7 @@ const ProviderList: React.FC<{
   link: string;
 }> = ({ title, providers, link }) => (
   <div className="mb-3">
-    <h4 className="text-md font-semibold text-brand-text-light mb-2">
-      {title}
-    </h4>
+    <h4 className="text-md font-semibold text-brand-text-light mb-2">{title}</h4>
     <div className="flex flex-wrap gap-2">
       {providers.map((p) => (
         <a
@@ -171,9 +171,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
     return getBestLogo(media.images?.logos);
   }, [media.images]);
 
-  const logoUrl = logo
-    ? `${TMDB_IMAGE_BASE_URL.replace("w500", "original")}${logo.file_path}`
-    : "";
+  const logoUrl = logo ? `${TMDB_IMAGE_BASE_URL.replace("w500", "original")}${logo.file_path}` : "";
 
   const rentOrBuyProviders = useMemo(() => {
     return combineRentBuyProviders(providers);
@@ -201,7 +199,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
   // Lock body scroll when modal is open
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = originalOverflow;
     };
@@ -213,14 +211,10 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
 
   const releaseYears = () => {
     if (media.media_type === "movie") {
-      return media.release_date
-        ? new Date(media.release_date).getFullYear()
-        : "N/A";
+      return media.release_date ? new Date(media.release_date).getFullYear() : "N/A";
     }
     const tvMedia = media as TVDetail;
-    const startYear = tvMedia.first_air_date
-      ? new Date(tvMedia.first_air_date).getFullYear()
-      : "";
+    const startYear = tvMedia.first_air_date ? new Date(tvMedia.first_air_date).getFullYear() : "";
     const endYear =
       tvMedia.last_air_date && tvMedia.status === "Ended"
         ? new Date(tvMedia.last_air_date).getFullYear()
@@ -265,10 +259,11 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
         </header>
 
         <main
-          className={`flex-grow overflow-y-auto w-full max-w-7xl mx-auto grid ${media.media_type === "tv" && watchlistItem?.media_type === "tv"
-            ? "grid-cols-1 lg:grid-cols-[minmax(0,_2fr)_minmax(0,_1.5fr)]"
-            : "grid-cols-1"
-            } gap-8 p-4 sm:p-6 lg:p-8`}
+          className={`flex-grow overflow-y-auto w-full max-w-7xl mx-auto grid ${
+            media.media_type === "tv" && watchlistItem?.media_type === "tv"
+              ? "grid-cols-1 lg:grid-cols-[minmax(0,_2fr)_minmax(0,_1.5fr)]"
+              : "grid-cols-1"
+          } gap-8 p-4 sm:p-6 lg:p-8`}
         >
           <div className="flex flex-col md:flex-row gap-8 items-start">
             <div className="w-full md:w-auto md:max-w-[300px] flex-shrink-0 mx-auto hidden md:block">
@@ -297,9 +292,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
               )}
 
               <div className="flex items-center gap-4 sm:gap-6 text-brand-text-dim">
-                {media.media_type === "movie" && (
-                  <span>{media.runtime} min</span>
-                )}
+                {media.media_type === "movie" && <span>{media.runtime} min</span>}
                 <span>{releaseYears()}</span>
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-lg text-white">
@@ -314,10 +307,7 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
               <DetailSection title="Genres">
                 <div className="flex flex-wrap gap-2">
                   {media.genres.map((g) => (
-                    <span
-                      key={g.id}
-                      className="bg-white/10 px-3 py-1 rounded-full text-sm"
-                    >
+                    <span key={g.id} className="bg-white/10 px-3 py-1 rounded-full text-sm">
                       {g.name}
                     </span>
                   ))}
@@ -352,12 +342,8 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
 
               <DetailSection title="Where to Watch">
                 {isLoadingProviders ? (
-                  <p className="text-sm text-brand-text-dim animate-pulse">
-                    Loading providers...
-                  </p>
-                ) : providers &&
-                  (providers.flatrate?.length ||
-                    rentOrBuyProviders.length > 0) ? (
+                  <p className="text-sm text-brand-text-dim animate-pulse">Loading providers...</p>
+                ) : providers && (providers.flatrate?.length || rentOrBuyProviders.length > 0) ? (
                   <div>
                     {providers.flatrate && providers.flatrate.length > 0 && (
                       <ProviderList
@@ -405,10 +391,11 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                 {/* Watchlist Toggle - Primary Action */}
                 <button
                   onClick={() => onToggleWatchlist(media)}
-                  className={`flex-1 min-w-[140px] py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${isInWatchlist
-                    ? "bg-white/10 hover:bg-red-500/20 text-white hover:text-red-400 border border-white/10"
-                    : "bg-brand-primary hover:bg-brand-secondary text-brand-bg shadow-lg shadow-brand-primary/20"
-                    }`}
+                  className={`flex-1 min-w-[140px] py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+                    isInWatchlist
+                      ? "bg-white/10 hover:bg-red-500/20 text-white hover:text-red-400 border border-white/10"
+                      : "bg-brand-primary hover:bg-brand-secondary text-brand-bg shadow-lg shadow-brand-primary/20"
+                  }`}
                 >
                   {isInWatchlist ? (
                     <>
@@ -437,18 +424,21 @@ export const MediaDetailModal: React.FC<MediaDetailModalProps> = ({
                 )}
 
                 {/* Mark as Watched (Movies only) */}
-                {media.media_type === "movie" && isInWatchlist && watchlistItem?.media_type === "movie" && (
-                  <button
-                    onClick={() => onToggleMovieWatched(media.id)}
-                    className={`flex-1 min-w-[140px] py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 border ${watchlistItem.watched
-                      ? "bg-brand-primary/20 border-brand-primary text-brand-primary"
-                      : "bg-white/10 hover:bg-white/15 text-white border-white/10"
+                {media.media_type === "movie" &&
+                  isInWatchlist &&
+                  watchlistItem?.media_type === "movie" && (
+                    <button
+                      onClick={() => onToggleMovieWatched(media.id)}
+                      className={`flex-1 min-w-[140px] py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 border ${
+                        watchlistItem.watched
+                          ? "bg-brand-primary/20 border-brand-primary text-brand-primary"
+                          : "bg-white/10 hover:bg-white/15 text-white border-white/10"
                       }`}
-                  >
-                    <FiCheckCircle className="h-5 w-5" />
-                    <span>{watchlistItem.watched ? "Watched" : "Mark Watched"}</span>
-                  </button>
-                )}
+                    >
+                      <FiCheckCircle className="h-5 w-5" />
+                      <span>{watchlistItem.watched ? "Watched" : "Mark Watched"}</span>
+                    </button>
+                  )}
               </div>
             </div>
           </div>

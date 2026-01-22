@@ -90,13 +90,13 @@ export type Media = SearchResult | WatchlistItem;
 export interface MovieWatchlistItem extends MovieDetail {
   watched: boolean;
   tags?: string[];
-  watchlistStatus?: 'watchlist' | 'watching' | 'watched';
+  watchlistStatus?: "watchlist" | "watching" | "watched";
 }
 
 export interface TVWatchlistItem extends TVDetail {
   watchedEpisodes: Record<number, number[]>;
   tags?: string[];
-  watchlistStatus?: 'watchlist' | 'watching' | 'watched';
+  watchlistStatus?: "watchlist" | "watching" | "watched";
 }
 
 export type WatchlistItem = MovieWatchlistItem | TVWatchlistItem;
