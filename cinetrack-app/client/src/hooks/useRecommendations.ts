@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { getMovieRecommendations, getTVRecommendations } from "../services/tmdbService";
+import { shuffleArray } from "../utils/arrayUtils";
 import type { SearchResult, WatchlistItem } from "../types/types";
 
 interface UseRecommendationsReturn {
@@ -8,16 +9,6 @@ interface UseRecommendationsReturn {
   error: string | null;
   fetchRecommendations: () => Promise<void>;
 }
-
-// Fisher-Yates shuffle algorithm
-const shuffleArray = <T>(array: T[]): T[] => {
-  const newArray = [...array];
-  for (let i = newArray.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-  }
-  return newArray;
-};
 
 export const useRecommendations = (
   watchlist: WatchlistItem[],
