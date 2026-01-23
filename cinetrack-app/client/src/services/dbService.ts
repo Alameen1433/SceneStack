@@ -90,3 +90,37 @@ export const getRecommendations = async (refresh = false): Promise<Recommendatio
     `/watchlist/recommendations${refresh ? "?refresh=true" : ""}`
   );
 };
+
+// --- Notifications ---
+
+export interface Notification {
+  _id: string;
+  userId: string;
+  type: "system" | "milestone" | "premiere";
+  title: string;
+  message: string;
+  data?: any;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface NotificationsResponse {
+  notifications: Notification[];
+  unreadCount: number;
+}
+
+export const getNotifications = async (): Promise<NotificationsResponse> => {
+  return apiFetch<NotificationsResponse>("/notifications");
+};
+
+export const markNotificationAsRead = async (id: string): Promise<void> => {
+  await apiFetch<void>(`/notifications/${id}/read`, { method: "PATCH" });
+};
+
+export const markAllNotificationsAsRead = async (): Promise<void> => {
+  await apiFetch<void>(`/notifications/read-all`, { method: "PATCH" });
+};
+
+export const deleteNotification = async (id: string): Promise<void> => {
+  await apiFetch<void>(`/notifications/${id}`, { method: "DELETE" });
+};

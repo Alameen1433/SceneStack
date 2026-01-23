@@ -2,6 +2,7 @@ import React, { Suspense, memo, useMemo } from "react";
 import { Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { FiSettings, FiSearch, FiBell, FiGithub, FiArrowLeft } from "react-icons/fi";
 import { useWatchlistStore, getWatchlistIds } from "../store/useWatchlistStore";
+import { useNotificationStore } from "../store/useNotificationStore";
 import { useUIContext } from "../contexts/UIContext";
 import { SearchBar } from "../components/common/SearchBar";
 import { SearchPalette } from "../components/common/SearchPalette";
@@ -68,6 +69,8 @@ const Header: React.FC = memo(() => {
     }
   };
 
+  const unreadCount = useNotificationStore((state) => state.unreadCount);
+
   return (
     <header className="sticky top-0 z-20 bg-brand-bg/80 backdrop-blur-lg">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -96,7 +99,11 @@ const Header: React.FC = memo(() => {
               aria-label="Notifications"
             >
               <FiBell className="h-6 w-6" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-brand-primary rounded-full" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-brand-primary rounded-full border-2 border-brand-bg">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-primary opacity-75"></span>
+                </span>
+              )}
             </button>
             <button
               onClick={openSettings}
@@ -160,7 +167,11 @@ const Header: React.FC = memo(() => {
                   aria-label="Notifications"
                 >
                   <FiBell className="h-6 w-6" />
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-brand-primary rounded-full" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-brand-primary rounded-full border-2 border-brand-bg">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-primary opacity-75"></span>
+                    </span>
+                  )}
                 </button>
                 <button
                   onClick={openSettings}

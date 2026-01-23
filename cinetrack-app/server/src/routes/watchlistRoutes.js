@@ -5,6 +5,7 @@ const { validate } = require("../middleware/validate");
 const { watchlistItemSchema, watchlistImportSchema } = require("../validation/schemas");
 const { cache } = require("../config");
 const { ObjectId } = require("mongodb");
+const { checkAndTriggerMilestones } = require("../services/milestoneService");
 
 const router = express.Router();
 
@@ -56,7 +57,8 @@ module.exports = (
   broadcastToUser,
   client,
   usersCollection,
-  demoUsersCollection
+  demoUsersCollection,
+  notificationCollection
 ) => {
   const getWatchlistCollection = async (userId) => {
     const demoUser = await demoUsersCollection.findOne({ _id: new ObjectId(userId) });
@@ -212,6 +214,17 @@ module.exports = (
 
       broadcastToUser(req.userId, "watchlist:update", itemWithUser);
       res.status(200).json(itemWithUser);
+
+      // Check for milestones (async, don't wait)
+      if (!isDemo && notificationCollection) {
+        checkAndTriggerMilestones(
+          req.userId,
+          collection,
+          usersCollection,
+          notificationCollection,
+          broadcastToUser
+        ).catch((err) => console.error("Milestone check failed:", err));
+      }
     })
   );
 
@@ -277,6 +290,17 @@ module.exports = (
 
       broadcastToUser(req.userId, "watchlist:sync", { trigger: "import" });
       res.status(200).json({ message: `Import successful. ${items.length} items imported.` });
+
+      // Check for milestones
+      if (notificationCollection) {
+        checkAndTriggerMilestones(
+          req.userId,
+          watchlistCollection,
+          usersCollection,
+          notificationCollection,
+          broadcastToUser
+        ).catch((err) => console.error("Milestone check failed:", err));
+      }
     })
   );
 

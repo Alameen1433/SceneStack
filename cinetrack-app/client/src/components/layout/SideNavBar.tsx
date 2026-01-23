@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useAuthContext } from "../../contexts/AuthContext";
+import { useNotificationStore } from "../../store/useNotificationStore";
 import { ConfirmModal } from "../common/ConfirmModal";
 import {
   FiCompass,
@@ -63,6 +64,7 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
   onOpenNotifications,
 }) => {
   const { user, logout } = useAuthContext();
+  const { unreadCount } = useNotificationStore();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -156,9 +158,11 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
           >
             <FiBell className="w-5 h-5" />
             {isExpanded && <span className="ml-3 text-sm font-medium">Notifications</span>}
-            <span
-              className={`absolute ${!isExpanded ? "top-2 right-2" : "top-2.5 left-6"} w-2 h-2 bg-brand-primary rounded-full`}
-            />
+            {unreadCount > 0 && (
+              <span
+                className={`absolute ${!isExpanded ? "top-2 right-2" : "top-2.5 left-6"} w-2 h-2 bg-brand-primary rounded-full`}
+              />
+            )}
           </button>
           <a
             href="https://github.com/Alameen1433"

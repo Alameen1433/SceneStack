@@ -17,6 +17,8 @@ const { errorHandler } = require("./middleware/errorHandler");
 const authRoutes = require("./routes/authRoutes");
 const watchlistRoutes = require("./routes/watchlistRoutes");
 const tmdbRoutes = require("./routes/tmdbRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
+const { initCronJobs } = require("./services/cronService");
 
 const app = express();
 const server = http.createServer(app);
@@ -128,6 +130,7 @@ const client = new MongoClient(config.mongo.uri, {
 
 let watchlistCollection;
 let usersCollection;
+let notificationCollection;
 let demoUsersCollection;
 let demoWatchlistCollection;
 
@@ -137,6 +140,7 @@ async function connectToDb() {
     const db = client.db("scenestackDB");
     watchlistCollection = db.collection("watchlist");
     usersCollection = db.collection("users");
+    notificationCollection = db.collection("notifications");
     demoUsersCollection = db.collection("demoUsers");
     demoWatchlistCollection = db.collection("demoWatchlist");
     console.log("Successfully connected to MongoDB.");
@@ -145,6 +149,7 @@ async function connectToDb() {
     await watchlistCollection.createIndex({ userId: 1, id: 1 }, { unique: true });
     await watchlistCollection.createIndex({ userId: 1, watchlistStatus: 1 });
     await usersCollection.createIndex({ email: 1 }, { unique: true });
+    await notificationCollection.createIndex({ userId: 1, createdAt: -1 });
 
     // Create indexes for demo collections with TTL for auto-cleanup
     await demoUsersCollection.createIndex({ email: 1 }, { unique: true });
@@ -190,8 +195,14 @@ app.use("/api/watchlist", (req, res, next) => {
     broadcastToUser,
     client,
     usersCollection,
-    demoUsersCollection
+    demoUsersCollection,
+    notificationCollection
   )(req, res, next);
+});
+
+// --- Notification Routes ---
+app.use("/api/notifications", (req, res, next) => {
+  notificationRoutes(notificationCollection)(req, res, next);
 });
 
 // --- TMDB Proxy Routes ---
@@ -210,5 +221,8 @@ connectToDb().then(() => {
   server.listen(port, () => {
     console.log(`Scene Stack server running on port ${port}`);
     console.log(`Socket.IO enabled for real-time sync`);
+
+    // Initialize Cron Jobs
+    initCronJobs(watchlistCollection, notificationCollection, broadcastToUser);
   });
 });

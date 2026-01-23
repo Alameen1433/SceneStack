@@ -8,11 +8,13 @@ import { useDemoWelcome } from "./hooks/useDemoWelcome";
 import { RouterProvider } from "react-router-dom";
 import { router } from "./router";
 import { useWatchlistInit } from "./store/useWatchlistStore";
+import { useNotificationInit } from "./store/useNotificationStore";
 
 const AuthPage = lazy(() => import("./pages/AuthPage").then((m) => ({ default: m.AuthPage })));
 
 const WatchlistInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   useWatchlistInit();
+  useNotificationInit();
   return <>{children}</>;
 };
 
