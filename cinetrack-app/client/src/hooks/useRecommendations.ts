@@ -9,6 +9,16 @@ interface UseRecommendationsReturn {
   fetchRecommendations: () => Promise<void>;
 }
 
+// Fisher-Yates shuffle algorithm
+const shuffleArray = <T>(array: T[]): T[] => {
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+  return newArray;
+};
+
 export const useRecommendations = (
   watchlist: WatchlistItem[],
   watchlistIds: Set<number>
@@ -28,7 +38,7 @@ export const useRecommendations = (
 
     try {
       // Pick up to 3 random items from watchlist as seeds
-      const shuffled = [...watchlist].sort(() => 0.5 - Math.random());
+      const shuffled = shuffleArray(watchlist);
       const seedItems = shuffled.slice(0, 3);
 
       const recPromises = seedItems.map((item) =>
