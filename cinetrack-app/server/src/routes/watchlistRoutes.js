@@ -27,6 +27,16 @@ const fetchFromTMDB = async (endpoint) => {
   return response.json();
 };
 
+const shuffleArray = (array) => {
+  if (array.length <= 1) return [...array];
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+};
+
 const computeWatchlistStatus = (item) => {
   if (item.media_type === "movie") {
     return item.watched ? "watched" : "watchlist";
@@ -116,14 +126,16 @@ module.exports = (
         }
       }
 
-      const watchlist = await collection.find({ userId: req.userId }).toArray();
+      const watchlist = await collection
+        .find({ userId: req.userId }, { projection: { _id: 0, id: 1, media_type: 1 } })
+        .toArray();
 
       if (watchlist.length === 0) {
         return res.json({ recommendations: [] });
       }
 
       const watchlistIds = new Set(watchlist.map((item) => item.id));
-      const shuffled = [...watchlist].sort(() => 0.5 - Math.random());
+      const shuffled = shuffleArray(watchlist);
       const seedItems = shuffled.slice(0, 5);
 
       const recPromises = seedItems.map(async (item) => {
