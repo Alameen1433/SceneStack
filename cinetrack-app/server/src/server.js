@@ -150,6 +150,10 @@ async function connectToDb() {
     await watchlistCollection.createIndex({ userId: 1, watchlistStatus: 1 });
     await usersCollection.createIndex({ email: 1 }, { unique: true });
     await notificationCollection.createIndex({ userId: 1, createdAt: -1 });
+    await notificationCollection.createIndex(
+      { createdAt: 1 },
+      { expireAfterSeconds: 30 * 24 * 60 * 60 } // 30 days TTL
+    );
 
     // Create indexes for demo collections with TTL for auto-cleanup
     await demoUsersCollection.createIndex({ email: 1 }, { unique: true });
