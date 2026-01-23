@@ -116,7 +116,9 @@ module.exports = (
         }
       }
 
-      const watchlist = await collection.find({ userId: req.userId }).toArray();
+      const watchlist = await collection
+        .find({ userId: req.userId }, { projection: { id: 1, media_type: 1 } })
+        .toArray();
 
       if (watchlist.length === 0) {
         return res.json({ recommendations: [] });
