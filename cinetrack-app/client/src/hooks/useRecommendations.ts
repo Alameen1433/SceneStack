@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { getMovieRecommendations, getTVRecommendations } from "../services/tmdbService";
+import { shuffleArray } from "../utils/arrayUtils";
 import type { SearchResult, WatchlistItem } from "../types/types";
 
 interface UseRecommendationsReturn {
@@ -28,7 +29,7 @@ export const useRecommendations = (
 
     try {
       // Pick up to 3 random items from watchlist as seeds
-      const shuffled = [...watchlist].sort(() => 0.5 - Math.random());
+      const shuffled = shuffleArray(watchlist);
       const seedItems = shuffled.slice(0, 3);
 
       const recPromises = seedItems.map((item) =>
