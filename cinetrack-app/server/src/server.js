@@ -155,17 +155,26 @@ async function connectToDb() {
       { expireAfterSeconds: 30 * 24 * 60 * 60 } // 30 days TTL
     );
 
+    const ensureTTLIndex = async (collection, field, ttlSeconds) => {
+      const indexName = `${field}_1`;
+      try {
+        await collection.createIndex({ [field]: 1 }, { expireAfterSeconds: ttlSeconds });
+      } catch (err) {
+        if (err.code === 85 || err.codeName === "IndexOptionsConflict") {
+          console.log(`Dropping conflicting TTL index on ${collection.collectionName}.${field}`);
+          await collection.dropIndex(indexName);
+          await collection.createIndex({ [field]: 1 }, { expireAfterSeconds: ttlSeconds });
+        } else {
+          throw err;
+        }
+      }
+    };
+
     // Create indexes for demo collections with TTL for auto-cleanup
     await demoUsersCollection.createIndex({ email: 1 }, { unique: true });
-    await demoUsersCollection.createIndex(
-      { createdAt: 1 },
-      { expireAfterSeconds: config.demoTtlSeconds }
-    );
+    await ensureTTLIndex(demoUsersCollection, "createdAt", config.demoTtlSeconds);
     await demoWatchlistCollection.createIndex({ userId: 1, id: 1 }, { unique: true });
-    await demoWatchlistCollection.createIndex(
-      { createdAt: 1 },
-      { expireAfterSeconds: config.demoTtlSeconds }
-    );
+    await ensureTTLIndex(demoWatchlistCollection, "createdAt", config.demoTtlSeconds);
     console.log(`Demo TTL indexes created (${config.demoTtlSeconds}s)`);
   } catch (err) {
     console.error("Failed to connect to MongoDB:", err.message);
