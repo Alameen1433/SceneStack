@@ -25,39 +25,18 @@ const fetchFromTMDB = async (endpoint) => {
 };
 
 const getCachedTVDetails = async (tvId) => {
-    const cacheKey = `tmdb:tv:${tvId}`;
-    const cached = await cache.get(cacheKey);
-    if (cached) return cached;
+  const cacheKey = `tmdb:tv:${tvId}`;
+  const cached = await cache.get(cacheKey);
+  if (cached) return cached;
 
-    const details = await fetchFromTMDB(`tv/${tvId}`);
-    if (details) {
-        // Cache for 24 hours (86400s)
-        await cache.set(cacheKey, details, 86400);
-    }
-    return details;
+  const details = await fetchFromTMDB(`tv/${tvId}`);
+  if (details) {
+    await cache.set(cacheKey, details, 86400);
+  }
+  return details;
 };
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// Simple concurrency limiter
-const mapAsync = async (array, limit, fn) => {
-    const results = [];
-    const executing = [];
-
-    for (const item of array) {
-        const p = Promise.resolve().then(() => fn(item));
-        results.push(p);
-
-        if (limit <= array.length) {
-            const e = p.then(() => executing.splice(executing.indexOf(e), 1));
-            executing.push(e);
-            if (executing.length >= limit) {
-                await Promise.race(executing);
-            }
-        }
-    }
-    return Promise.all(results);
-};
 
 const checkPremiereAlerts = async (
   watchlistCollection,
@@ -65,110 +44,127 @@ const checkPremiereAlerts = async (
   broadcastToUser
 ) => {
   console.log("Starting Premiere Alert check...");
-  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  const today = new Date().toISOString().split("T")[0];
 
   try {
-    // 1. Find all unique TV shows being watched or watched by anyone
     const pipeline = [
       {
         $match: {
           media_type: "tv",
-          watchlistStatus: { $in: ["watching", "watched"] },
+          watchlistStatus: "watching",
         },
       },
       {
         $group: {
           _id: "$id",
-          userIds: { $push: "$userId" },
-          titles: { $first: "$name" },
+          title: { $first: "$name" },
         },
       },
     ];
 
-    const showsToCheck = await watchlistCollection.aggregate(pipeline).toArray();
-    console.log(`Checking ${showsToCheck.length} unique TV shows for premieres...`);
+    const showCursor = watchlistCollection.aggregate(pipeline);
+    
+    let showsProcessed = 0;
+    let alertsSent = 0;
 
-    // Process in batches
-    await mapAsync(showsToCheck, CONCURRENCY_LIMIT, async (show) => {
-        const tvId = show._id;
+    for await (const show of showCursor) {
+      showsProcessed++;
+      const tvId = show._id;
+
+      try {
         const details = await getCachedTVDetails(tvId);
 
-        if (!details) return;
+        if (!details) continue;
 
-        // Optimization: Skip ended shows if status is strictly "Ended" or "Canceled"
-        // But re-runs or specials might happen? "Premiere" usually implies new season/ep.
         if (details.status === "Ended" || details.status === "Canceled") {
-             // double check next_episode_to_air just in case
-             if (!details.next_episode_to_air) return;
+          if (!details.next_episode_to_air) continue;
         }
 
+        const nextEp = details.next_episode_to_air;
         let notificationMessage = null;
         let notificationTitle = "Premiere Alert!";
 
-        const nextEp = details.next_episode_to_air;
         if (nextEp && nextEp.air_date === today) {
-            if (nextEp.episode_number === 1) {
-                notificationMessage = `New Season ${nextEp.season_number} of ${details.name} starts today!`;
-            }
+          if (nextEp.episode_number === 1) {
+            notificationMessage = `New Season ${nextEp.season_number} of ${details.name} starts today!`;
+          }
         }
 
         if (notificationMessage) {
-            const userIds = show.userIds;
-            const newNotifications = [];
+          const subscriberCursor = watchlistCollection.find({
+            id: tvId,
+            watchlistStatus: { $in: ["watching", "watched"] },
+          });
 
-            // Check duplicates for each user
-            for (const userId of userIds) {
-                const exists = await notificationCollection.findOne({
-                    userId,
-                    type: "premiere",
-                    "data.mediaId": tvId,
-                    message: notificationMessage // Dedup exact message for today
-                });
+          let batch = [];
+          const BATCH_SIZE = 500;
 
-                if (!exists) {
-                    newNotifications.push({
-                        userId, // String format
-                        type: "premiere",
-                        title: notificationTitle,
-                        message: notificationMessage,
-                        data: {
-                            mediaId: tvId,
-                            mediaType: "tv",
-                        },
-                        isRead: false,
-                        createdAt: new Date(),
-                    });
-                }
+          for await (const subscriber of subscriberCursor) {
+            const userId = subscriber.userId;
+
+            const exists = await notificationCollection.findOne({
+               userId,
+               type: "premiere",
+               "data.mediaId": tvId,
+               message: notificationMessage,
+            });
+
+            if (!exists) {
+              batch.push({
+                userId,
+                type: "premiere",
+                title: notificationTitle,
+                message: notificationMessage,
+                data: {
+                  mediaId: tvId,
+                  mediaType: "tv",
+                },
+                isRead: false,
+                createdAt: new Date(),
+              });
             }
 
-            if (newNotifications.length > 0) {
-                await notificationCollection.insertMany(newNotifications);
-
-                // Broadcast
-                newNotifications.forEach((n) => {
-                    broadcastToUser(n.userId, "notification:new", n);
-                });
-                console.log(`Sent premiere alert for ${details.name} to ${newNotifications.length} users.`);
+            if (batch.length >= BATCH_SIZE) {
+               await notificationCollection.insertMany(batch);
+               batch.forEach(n => broadcastToUser(n.userId, "notification:new", n));
+               alertsSent += batch.length;
+               batch = [];
             }
+          }
+
+          if (batch.length > 0) {
+            await notificationCollection.insertMany(batch);
+            batch.forEach(n => broadcastToUser(n.userId, "notification:new", n));
+            alertsSent += batch.length;
+            batch = [];
+          }
+          
+          console.log(`Sent premiere alert for ${details.name} (Season ${nextEp.season_number}).`);
         }
-    });
+      } catch (innerErr) {
+        console.error(`Error processing show ${show.title} (${tvId}):`, innerErr.message);
+      }
+    }
 
-    console.log("Premiere Alert check complete.");
+    console.log(`Premiere Alert check complete. Processed ${showsProcessed} shows. Sent ${alertsSent} alerts.`);
   } catch (err) {
-    console.error("Error in checkPremiereAlerts:", err);
+    console.error("Critical Error in checkPremiereAlerts:", err);
   }
 };
 
 const initCronJobs = (watchlistCollection, notificationCollection, broadcastToUser) => {
-  // Schedule to run every day at 12:00 PM UTC
-  cron.schedule("0 12 * * *", () => {
+  console.log("Running startup Premiere Alert check...");
+  checkPremiereAlerts(watchlistCollection, notificationCollection, broadcastToUser);
+
+  // Schedule to run 3 times daily - 8 AM, 2 PM, 8 PM UTC
+  cron.schedule("0 8,14,20 * * *", () => {
     checkPremiereAlerts(watchlistCollection, notificationCollection, broadcastToUser);
   });
 
-  console.log("Cron jobs initialized: Premiere Alerts scheduled for 12:00 PM daily.");
+  console.log("Cron jobs initialized: Premiere Alerts scheduled for 8 AM, 2 PM, 8 PM UTC daily.");
 };
 
 module.exports = {
-    initCronJobs,
-    checkPremiereAlerts
+  initCronJobs,
+  checkPremiereAlerts,
 };

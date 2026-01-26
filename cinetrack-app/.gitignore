@@ -16,6 +16,7 @@ dist-ssr
 !.env.example
 infra/data
 server/benchmarks
+server/scripts
 
 # Editor directories and files
 .vscode/*

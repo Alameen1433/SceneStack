@@ -46,9 +46,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   markAsRead: async (id: string) => {
     const { notifications } = get();
     // Optimistic update
-    const updated = notifications.map((n) =>
-      n._id === id ? { ...n, isRead: true } : n
-    );
+    const updated = notifications.map((n) => (n._id === id ? { ...n, isRead: true } : n));
     const unreadCount = updated.filter((n) => !n.isRead).length;
 
     set({ notifications: updated, unreadCount });
@@ -107,7 +105,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
     // Show toast for new notification
     toast(notification.title, {
-        description: notification.message,
+      description: notification.message,
     });
   },
 }));

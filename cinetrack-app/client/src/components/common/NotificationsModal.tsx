@@ -13,7 +13,7 @@ const timeAgo = (dateStr: string) => {
   const now = new Date();
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-  if (seconds < 60) return 'Just now';
+  if (seconds < 60) return "Just now";
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}m ago`;
   const hours = Math.floor(minutes / 60);
@@ -22,11 +22,14 @@ const timeAgo = (dateStr: string) => {
   return `${days}d ago`;
 };
 
-const NotificationIcon = ({ type }: { type: Notification['type'] }) => {
+const NotificationIcon = ({ type }: { type: Notification["type"] }) => {
   switch (type) {
-    case 'milestone': return <FiAward className="text-yellow-400 w-5 h-5" />;
-    case 'premiere': return <FiTv className="text-purple-400 w-5 h-5" />;
-    default: return <FiInfo className="text-blue-400 w-5 h-5" />;
+    case "milestone":
+      return <FiAward className="text-yellow-400 w-5 h-5" />;
+    case "premiere":
+      return <FiTv className="text-purple-400 w-5 h-5" />;
+    default:
+      return <FiInfo className="text-blue-400 w-5 h-5" />;
   }
 };
 
@@ -53,7 +56,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, 
             Notifications
           </h2>
           <div className="flex items-center gap-2">
-            {notifications.some(n => !n.isRead) && (
+            {notifications.some((n) => !n.isRead) && (
               <button
                 onClick={() => markAllAsRead()}
                 className="text-xs font-medium text-brand-primary hover:text-brand-primary/80 transition-colors px-3 py-1.5 rounded-full bg-brand-primary/10"
@@ -91,19 +94,25 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, 
                 }`}
               >
                 <div className="flex gap-4">
-                  <div className={`mt-1 p-2 rounded-full h-fit ${n.isRead ? 'bg-white/5' : 'bg-brand-primary/10'}`}>
+                  <div
+                    className={`mt-1 p-2 rounded-full h-fit ${n.isRead ? "bg-white/5" : "bg-brand-primary/10"}`}
+                  >
                     <NotificationIcon type={n.type} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start gap-2">
-                      <h4 className={`font-medium truncate pr-6 ${n.isRead ? 'text-brand-text-dim' : 'text-white'}`}>
+                      <h4
+                        className={`font-medium truncate pr-6 ${n.isRead ? "text-brand-text-dim" : "text-white"}`}
+                      >
                         {n.title}
                       </h4>
                       <span className="text-xs text-brand-text-dim shrink-0 whitespace-nowrap">
                         {timeAgo(n.createdAt)}
                       </span>
                     </div>
-                    <p className={`text-sm mt-1 leading-relaxed ${n.isRead ? 'text-brand-text-dim/70' : 'text-brand-text-light'}`}>
+                    <p
+                      className={`text-sm mt-1 leading-relaxed ${n.isRead ? "text-brand-text-dim/70" : "text-brand-text-light"}`}
+                    >
                       {n.message}
                     </p>
                   </div>
@@ -113,7 +122,10 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, 
                 <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   {!n.isRead && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); markAsRead(n._id); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        markAsRead(n._id);
+                      }}
                       className="p-1.5 rounded-lg text-brand-text-dim hover:text-brand-primary hover:bg-brand-primary/10 transition-colors"
                       title="Mark as read"
                     >
@@ -121,7 +133,10 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({ isOpen, 
                     </button>
                   )}
                   <button
-                    onClick={(e) => { e.stopPropagation(); removeNotification(n._id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeNotification(n._id);
+                    }}
                     className="p-1.5 rounded-lg text-brand-text-dim hover:text-red-400 hover:bg-red-400/10 transition-colors"
                     title="Delete"
                   >

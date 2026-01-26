@@ -67,7 +67,6 @@ io.on("connection", (socket) => {
   });
 });
 
-// Helper to broadcast watchlist changes to all user's devices
 const broadcastToUser = (userId, event, data) => {
   io.to(`user:${userId}`).emit(event, data);
 };
@@ -182,7 +181,6 @@ async function connectToDb() {
   }
 }
 
-// MongoDB connection event handlers
 client.on("error", (err) => {
   console.error("MongoDB connection error:", err.message);
 });
@@ -221,15 +219,28 @@ app.use("/api/notifications", (req, res, next) => {
 // --- TMDB Proxy Routes ---
 app.use("/api/tmdb", tmdbRoutes);
 
-// --- Catch-all for SPA ---
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "../../client/dist/index.html"));
 });
 
+// --- Testing for if notifications were working... ---
+/*
+app.post("/api/debug/premiere-check", async (req, res) => {
+  const { checkPremiereAlerts } = require("./services/cronService");
+  const { cache } = require("./config");
+  
+  if (!watchlistCollection || !notificationCollection) {
+      return res.status(500).json({ error: "DB not initialized yet" });
+  }
+
+  await checkPremiereAlerts(watchlistCollection, notificationCollection, broadcastToUser);
+  res.json({ message: "Premiere check triggered! Check server logs." });
+});
+*/
+
 // --- Global Error Handler ---
 app.use(errorHandler);
 
-// --- Start Server ---
 connectToDb().then(() => {
   server.listen(port, () => {
     console.log(`Scene Stack server running on port ${port}`);
