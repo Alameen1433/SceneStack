@@ -5,6 +5,10 @@ const { validate } = require("../middleware/validate");
 const { watchlistItemSchema, watchlistImportSchema } = require("../validation/schemas");
 const { cache } = require("../config");
 const { ObjectId } = require("mongodb");
+const {
+  updateWatchTimeAndCheckMilestones,
+  checkAndTriggerMilestonesFull,
+} = require("../services/milestoneService");
 
 const router = express.Router();
 
@@ -56,7 +60,8 @@ module.exports = (
   broadcastToUser,
   client,
   usersCollection,
-  demoUsersCollection
+  demoUsersCollection,
+  notificationCollection
 ) => {
   const getWatchlistCollection = async (userId) => {
     const demoUser = await demoUsersCollection.findOne({ _id: new ObjectId(userId) });
@@ -194,8 +199,11 @@ module.exports = (
     authMiddleware,
     validate(watchlistItemSchema),
     asyncHandler(async (req, res) => {
-      const { collection } = await getWatchlistCollection(req.userId);
+      const { collection, isDemo } = await getWatchlistCollection(req.userId);
       const item = req.body;
+
+      // Fetch old item for incremental calculation
+      const oldItem = await collection.findOne({ id: item.id, userId: req.userId });
 
       const { _id, ...itemWithoutId } = item;
       const watchlistStatus = computeWatchlistStatus(itemWithoutId);
@@ -212,6 +220,19 @@ module.exports = (
 
       broadcastToUser(req.userId, "watchlist:update", itemWithUser);
       res.status(200).json(itemWithUser);
+
+      // Check for milestones (async, don't wait)
+      if (!isDemo && notificationCollection) {
+        updateWatchTimeAndCheckMilestones(
+          req.userId,
+          oldItem,
+          itemWithUser,
+          collection,
+          usersCollection,
+          notificationCollection,
+          broadcastToUser
+        ).catch((err) => console.error("Milestone check failed:", err));
+      }
     })
   );
 
@@ -226,6 +247,9 @@ module.exports = (
         throw new AppError("Invalid ID format.", 400);
       }
 
+      // Fetch item before delete for milestone calc
+      const oldItem = await collection.findOne({ id, userId: req.userId });
+
       const result = await collection.deleteOne({ id, userId: req.userId });
       if (result.deletedCount !== 1) {
         throw new AppError("Item not found.", 404);
@@ -233,6 +257,20 @@ module.exports = (
 
       broadcastToUser(req.userId, "watchlist:delete", { id });
       res.status(204).send();
+
+      // Check milestones (decrement watch time)
+      const { isDemo } = await getWatchlistCollection(req.userId);
+      if (!isDemo && notificationCollection && oldItem) {
+        updateWatchTimeAndCheckMilestones(
+          req.userId,
+          oldItem,
+          null, // newItem is null
+          collection,
+          usersCollection,
+          notificationCollection,
+          broadcastToUser
+        ).catch((err) => console.error("Milestone check failed:", err));
+      }
     })
   );
 
@@ -277,6 +315,17 @@ module.exports = (
 
       broadcastToUser(req.userId, "watchlist:sync", { trigger: "import" });
       res.status(200).json({ message: `Import successful. ${items.length} items imported.` });
+
+      // Check for milestones
+      if (notificationCollection) {
+        checkAndTriggerMilestonesFull(
+          req.userId,
+          watchlistCollection,
+          usersCollection,
+          notificationCollection,
+          broadcastToUser
+        ).catch((err) => console.error("Milestone check failed:", err));
+      }
     })
   );
 

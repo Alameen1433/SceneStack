@@ -17,6 +17,8 @@ const { errorHandler } = require("./middleware/errorHandler");
 const authRoutes = require("./routes/authRoutes");
 const watchlistRoutes = require("./routes/watchlistRoutes");
 const tmdbRoutes = require("./routes/tmdbRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
+const { initCronJobs } = require("./services/cronService");
 
 const app = express();
 const server = http.createServer(app);
@@ -65,7 +67,6 @@ io.on("connection", (socket) => {
   });
 });
 
-// Helper to broadcast watchlist changes to all user's devices
 const broadcastToUser = (userId, event, data) => {
   io.to(`user:${userId}`).emit(event, data);
 };
@@ -128,6 +129,7 @@ const client = new MongoClient(config.mongo.uri, {
 
 let watchlistCollection;
 let usersCollection;
+let notificationCollection;
 let demoUsersCollection;
 let demoWatchlistCollection;
 
@@ -137,6 +139,7 @@ async function connectToDb() {
     const db = client.db("scenestackDB");
     watchlistCollection = db.collection("watchlist");
     usersCollection = db.collection("users");
+    notificationCollection = db.collection("notifications");
     demoUsersCollection = db.collection("demoUsers");
     demoWatchlistCollection = db.collection("demoWatchlist");
     console.log("Successfully connected to MongoDB.");
@@ -145,18 +148,32 @@ async function connectToDb() {
     await watchlistCollection.createIndex({ userId: 1, id: 1 }, { unique: true });
     await watchlistCollection.createIndex({ userId: 1, watchlistStatus: 1 });
     await usersCollection.createIndex({ email: 1 }, { unique: true });
+    await notificationCollection.createIndex({ userId: 1, createdAt: -1 });
+    await notificationCollection.createIndex(
+      { createdAt: 1 },
+      { expireAfterSeconds: 30 * 24 * 60 * 60 } // 30 days TTL
+    );
+
+    const ensureTTLIndex = async (collection, field, ttlSeconds) => {
+      const indexName = `${field}_1`;
+      try {
+        await collection.createIndex({ [field]: 1 }, { expireAfterSeconds: ttlSeconds });
+      } catch (err) {
+        if (err.code === 85 || err.codeName === "IndexOptionsConflict") {
+          console.log(`Dropping conflicting TTL index on ${collection.collectionName}.${field}`);
+          await collection.dropIndex(indexName);
+          await collection.createIndex({ [field]: 1 }, { expireAfterSeconds: ttlSeconds });
+        } else {
+          throw err;
+        }
+      }
+    };
 
     // Create indexes for demo collections with TTL for auto-cleanup
     await demoUsersCollection.createIndex({ email: 1 }, { unique: true });
-    await demoUsersCollection.createIndex(
-      { createdAt: 1 },
-      { expireAfterSeconds: config.demoTtlSeconds }
-    );
+    await ensureTTLIndex(demoUsersCollection, "createdAt", config.demoTtlSeconds);
     await demoWatchlistCollection.createIndex({ userId: 1, id: 1 }, { unique: true });
-    await demoWatchlistCollection.createIndex(
-      { createdAt: 1 },
-      { expireAfterSeconds: config.demoTtlSeconds }
-    );
+    await ensureTTLIndex(demoWatchlistCollection, "createdAt", config.demoTtlSeconds);
     console.log(`Demo TTL indexes created (${config.demoTtlSeconds}s)`);
   } catch (err) {
     console.error("Failed to connect to MongoDB:", err.message);
@@ -164,7 +181,6 @@ async function connectToDb() {
   }
 }
 
-// MongoDB connection event handlers
 client.on("error", (err) => {
   console.error("MongoDB connection error:", err.message);
 });
@@ -190,25 +206,47 @@ app.use("/api/watchlist", (req, res, next) => {
     broadcastToUser,
     client,
     usersCollection,
-    demoUsersCollection
+    demoUsersCollection,
+    notificationCollection
   )(req, res, next);
+});
+
+// --- Notification Routes ---
+app.use("/api/notifications", (req, res, next) => {
+  notificationRoutes(notificationCollection)(req, res, next);
 });
 
 // --- TMDB Proxy Routes ---
 app.use("/api/tmdb", tmdbRoutes);
 
-// --- Catch-all for SPA ---
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "../../client/dist/index.html"));
 });
 
+// --- Testing for if notifications were working... ---
+/*
+app.post("/api/debug/premiere-check", async (req, res) => {
+  const { checkPremiereAlerts } = require("./services/cronService");
+  const { cache } = require("./config");
+  
+  if (!watchlistCollection || !notificationCollection) {
+      return res.status(500).json({ error: "DB not initialized yet" });
+  }
+
+  await checkPremiereAlerts(watchlistCollection, notificationCollection, broadcastToUser);
+  res.json({ message: "Premiere check triggered! Check server logs." });
+});
+*/
+
 // --- Global Error Handler ---
 app.use(errorHandler);
 
-// --- Start Server ---
 connectToDb().then(() => {
   server.listen(port, () => {
     console.log(`Scene Stack server running on port ${port}`);
     console.log(`Socket.IO enabled for real-time sync`);
+
+    // Initialize Cron Jobs
+    initCronJobs(watchlistCollection, notificationCollection, broadcastToUser);
   });
 });

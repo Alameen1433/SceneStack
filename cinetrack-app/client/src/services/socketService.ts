@@ -1,15 +1,18 @@
 import { io, Socket } from "socket.io-client";
 import type { WatchlistItem } from "../types/types";
+import type { Notification } from "./dbService";
 
 type WatchlistUpdateHandler = (item: WatchlistItem) => void;
 type WatchlistDeleteHandler = (data: { id: number }) => void;
 type WatchlistSyncHandler = (data: { trigger: string }) => void;
+type NotificationHandler = (notification: Notification) => void;
 
 class SocketService {
   private socket: Socket | null = null;
   private updateHandlers: WatchlistUpdateHandler[] = [];
   private deleteHandlers: WatchlistDeleteHandler[] = [];
   private syncHandlers: WatchlistSyncHandler[] = [];
+  private notificationHandlers: NotificationHandler[] = [];
 
   connect() {
     if (this.socket?.connected) return;
@@ -47,6 +50,10 @@ class SocketService {
     this.socket.on("watchlist:sync", (data: { trigger: string }) => {
       this.syncHandlers.forEach((handler) => handler(data));
     });
+
+    this.socket.on("notification:new", (notification: Notification) => {
+      this.notificationHandlers.forEach((handler) => handler(notification));
+    });
   }
 
   disconnect() {
@@ -74,6 +81,13 @@ class SocketService {
     this.syncHandlers.push(handler);
     return () => {
       this.syncHandlers = this.syncHandlers.filter((h) => h !== handler);
+    };
+  }
+
+  onNotification(handler: NotificationHandler) {
+    this.notificationHandlers.push(handler);
+    return () => {
+      this.notificationHandlers = this.notificationHandlers.filter((h) => h !== handler);
     };
   }
 
